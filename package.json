@@ -1,27 +1,35 @@
 {
-  "name": "new-app",
+  "name": "cookbot",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint"
   },
   "dependencies": {
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "next": "16.0.0"
+    "@google/generative-ai": "^0.24.1",
+    "deepai": "^1.0.23",
+    "firebase": "^12.5.0",
+    "jimp": "^0.22.10",
+    "next": "^16.0.1",
+    "openai": "^6.7.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-firebase-hooks": "^5.1.1",
+    "react-webcam": "^7.2.0",
+    "tesseract.js": "^4.1.1"
   },
   "devDependencies": {
-    "babel-plugin-react-compiler": "1.0.0",
-    "typescript": "^5",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.0.0"
+    "eslint-config-next": "16.0.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
