@@ -9,8 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/nextjs": "^5.0.0",
     "@google/generative-ai": "^0.24.1",
-    "deepai": "^1.0.23",
+    "axios": "^1.13.2",
     "firebase": "^12.5.0",
     "jimp": "^0.22.10",
     "next": "^16.0.1",

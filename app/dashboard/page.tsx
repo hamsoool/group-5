@@ -1,165 +1,254 @@
+// src/app/dashboard/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../utils/firebase';
-import IngredientManager from '../components/IngredientManager';
-import RecipeGenerator from '../components/RecipeGenerator';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { db, auth } from '@/lib/firebase';
+import IngredientManager from '@/app/components/IngredientManager';
+import RecipeGenerator from '@/app/components/RecipeGenerator';
 
 interface Ingredient {
+  id: string;
   name: string;
   quantity: number;
   unit: string;
-  type: string;
+  type: 'meat' | 'vegetable' | 'fish' | 'other';
 }
 
 interface Recipe {
+  id: string;
   title: string;
-  servings: number;
-  prepTime: string;
-  cookingTime: string;
   ingredients: string[];
   instructions: string[];
+  prepTime: string;
+  cookingTime: string;
+  servings: number;
 }
 
-export default function Dashboard() {
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function DashboardPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
 
+  // Check authentication and load recipes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+        loadRecipes(currentUser.uid);
       } else {
         router.push('/auth/login');
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
   }, [router]);
 
-  const handleGenerateRecipe = async () => {
-    if (ingredients.length === 0) {
-      setError('Please add some ingredients first');
-      return;
-    }
-
-    setGenerating(true);
-    setError(null);
-
+  const loadRecipes = async (userId: string) => {
     try {
-      const response = await fetch('/api/generate-recipe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ingredients }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate recipe');
-      }
-
-      const data = await response.json();
-      setRecipe(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate recipe');
+      const recipesCollection = collection(db, 'recipes');
+      const q = query(recipesCollection, where('userId', '==', userId));
+      const recipesSnapshot = await getDocs(q);
+      const recipesList = recipesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Recipe));
+      setSavedRecipes(recipesList);
+    } catch (error) {
+      console.error('Error loading recipes:', error);
     } finally {
-      setGenerating(false);
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
-        <div className="text-xl text-zinc-800 dark:text-zinc-200">Loading...</div>
-      </div>
-    );
-  }
+  const handleSaveRecipe = async (recipe: Omit<Recipe, 'id'> & { id?: string }) => {
+    if (!user) return;
+
+    try {
+      const recipesCollection = collection(db, 'recipes');
+      const docRef = await addDoc(recipesCollection, {
+        userId: user.uid,
+        title: recipe.title,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        prepTime: recipe.prepTime,
+        cookingTime: recipe.cookingTime,
+        servings: recipe.servings,
+        createdAt: new Date().toISOString()
+      });
+      
+      const newRecipe = {
+        id: docRef.id,
+        ...recipe
+      } as Recipe;
+      
+      setSavedRecipes([...savedRecipes, newRecipe]);
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+      alert('Failed to save recipe. Please try again.');
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  const handleDeleteRecipe = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'recipes', id));
+      setSavedRecipes(savedRecipes.filter(r => r.id !== id));
+    } catch (error) {
+      console.error('Error deleting recipe:', error);
+      alert('Failed to delete recipe. Please try again.');
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-6 dark:bg-black">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-black dark:text-white">My Kitchen</h1>
+    <div className="flex min-h-screen flex-col items-center bg-zinc-50 font-sans dark:bg-black">
+      <main className="flex w-full max-w-6xl flex-col items-center px-6 py-16 sm:px-16">
+        <div className="mb-6 flex w-full items-center justify-between">
+          <div>
+            <h1 className="text-5xl font-bold text-black dark:text-zinc-50">
+              Welcome to CookBot!
+            </h1>
+            {user && (
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                Logged in as: {user.email}
+              </p>
+            )}
+          </div>
           <button
-            onClick={() => auth.signOut()}
-            className="rounded-full border border-black px-4 py-2 text-black transition-colors hover:bg-zinc-100 dark:border-white dark:text-white dark:hover:bg-zinc-900"
+            onClick={handleSignOut}
+            className="rounded-md bg-red-500 px-4 py-2 text-white transition-colors hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
           >
-            Sign Out
+            Logout
           </button>
         </div>
+        <p className="mb-8 max-w-2xl text-xl text-zinc-600 dark:text-zinc-400">
+          Start generating recipes below by adding ingredients.
+        </p>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-xl border border-zinc-200 p-6 dark:border-zinc-800">
-            <h2 className="mb-4 text-xl font-semibold text-black dark:text-white">
-              Available Ingredients
-            </h2>
+        <div className="grid w-full max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
+            <h2 className="mb-4 text-2xl font-bold">Add Ingredients</h2>
             <IngredientManager onIngredientsChange={setIngredients} />
           </div>
 
-          <div className="rounded-xl border border-zinc-200 p-6 dark:border-zinc-800">
-            <h2 className="mb-4 text-xl font-semibold text-black dark:text-white">
-              Recipe Generator
-            </h2>
-            {error && (
-              <p className="mb-4 text-red-500">{error}</p>
-            )}
-            <button
-              onClick={handleGenerateRecipe}
-              disabled={generating || ingredients.length === 0}
-              className="w-full rounded-md bg-black py-2 text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-            >
-              {generating ? 'Generating...' : 'Generate Recipe'}
-            </button>
-
-            {recipe && (
-              <div className="mt-6 space-y-4">
-                <h3 className="text-xl font-bold">{recipe.title}</h3>
-                <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Serves: {recipe.servings} | Prep: {recipe.prepTime} | Cook: {recipe.cookingTime}
-                </div>
-                <div>
-                  <h4 className="font-medium">Ingredients:</h4>
-                  <ul className="ml-4 list-disc space-y-1">
-                    {recipe.ingredients.map((ingredient, index) => (
-                      <li key={index} className="text-zinc-600 dark:text-zinc-400">
-                        {ingredient}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-medium">Instructions:</h4>
-                  <ol className="ml-4 list-decimal space-y-2">
-                    {recipe.instructions.map((instruction, index) => (
-                      <li key={index} className="text-zinc-600 dark:text-zinc-400">
-                        {instruction}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              </div>
-            )}
+          <div className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
+            <h2 className="mb-4 text-2xl font-bold">Generate Recipe</h2>
+            <RecipeGenerator ingredients={ingredients} onSaveRecipe={handleSaveRecipe} />
           </div>
 
-          <div className="rounded-xl border border-zinc-200 p-6 dark:border-zinc-800">
-            <h2 className="mb-4 text-xl font-semibold text-black dark:text-white">
-              Saved Recipes
-            </h2>
-            <div className="text-zinc-600 dark:text-zinc-400">
-              No saved recipes yet.
+          <div className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800 md:col-span-2 lg:col-span-1">
+            <h2 className="mb-4 text-2xl font-bold">Saved Recipes ({savedRecipes.length})</h2>
+            <div className="max-h-96 space-y-3 overflow-y-auto">
+              {loading ? (
+                <p className="text-zinc-600 dark:text-zinc-400">Loading recipes...</p>
+              ) : savedRecipes.length === 0 ? (
+                <p className="text-zinc-600 dark:text-zinc-400">No saved recipes yet.</p>
+              ) : (
+                savedRecipes.map((recipe) => (
+                  <div
+                    key={recipe.id}
+                    className="rounded-md border border-zinc-200 p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800/50"
+                  >
+                    <div className="flex items-start justify-between">
+                      <button
+                        onClick={() => setSelectedRecipe(recipe)}
+                        className="flex-1 text-left"
+                      >
+                        <h3 className="font-semibold text-black dark:text-white">{recipe.title}</h3>
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                          {recipe.servings} servings • {recipe.prepTime}
+                        </p>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteRecipe(recipe.id);
+                        }}
+                        className="ml-2 text-red-500 hover:text-red-700 dark:text-red-400"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Recipe Detail Modal */}
+        {selectedRecipe && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={() => setSelectedRecipe(null)}
+          >
+            <div
+              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 dark:bg-zinc-900"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-start justify-between">
+                <h2 className="text-3xl font-bold text-black dark:text-white">
+                  {selectedRecipe.title}
+                </h2>
+                <button
+                  onClick={() => setSelectedRecipe(null)}
+                  className="text-2xl text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mb-6 flex gap-4 text-sm text-zinc-600 dark:text-zinc-400">
+                <span>⏱️ Prep: {selectedRecipe.prepTime}</span>
+                <span>🍳 Cook: {selectedRecipe.cookingTime}</span>
+                <span>🍽️ Serves: {selectedRecipe.servings}</span>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="mb-3 text-xl font-semibold text-black dark:text-white">Ingredients:</h3>
+                <ul className="list-inside list-disc space-y-2">
+                  {selectedRecipe.ingredients.map((ingredient, index) => (
+                    <li key={index} className="text-zinc-700 dark:text-zinc-300">
+                      {ingredient}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="mb-3 text-xl font-semibold text-black dark:text-white">Instructions:</h3>
+                <ol className="list-inside list-decimal space-y-3">
+                  {selectedRecipe.instructions.map((instruction, index) => (
+                    <li key={index} className="text-zinc-700 dark:text-zinc-300">
+                      {instruction}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <button
+                onClick={() => setSelectedRecipe(null)}
+                className="mt-6 w-full rounded-md bg-black py-2 text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
