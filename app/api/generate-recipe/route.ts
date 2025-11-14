@@ -12,7 +12,7 @@ const getErrorMessage = (error: unknown): string => {
 
 export async function POST(request: NextRequest) {
   try {
-    const { ingredients } = await request.json();
+    const { ingredients, customization } = await request.json();
 
     if (!ingredients || ingredients.length === 0) {
       return NextResponse.json(
@@ -33,7 +33,20 @@ export async function POST(request: NextRequest) {
       .map((i: any) => `${i.quantity} ${i.unit} ${i.name}`)
       .join(', ');
 
-    const prompt = `Generate 3 common, traditional FILIPINO recipes using these ingredients: ${ingredientList}
+    // Build customization instructions
+    let customizationText = '';
+    if (customization) {
+      const prefs = [];
+      if (customization.vegetarian) prefs.push('vegetarian (no meat or fish)');
+      if (customization.lowSalt) prefs.push('low sodium (use minimal salt and salty ingredients)');
+      if (customization.budgetFriendly) prefs.push('budget-friendly (use affordable, common ingredients)');
+      
+      if (prefs.length > 0) {
+        customizationText = `\n\nCUSTOMIZATION REQUIREMENTS: Make these recipes ${prefs.join(', ')}.`;
+      }
+    }
+
+    const prompt = `Generate 3 common, traditional FILIPINO recipes using these ingredients: ${ingredientList}${customizationText}
 
 IMPORTANT RULES:
 1. Only suggest REAL, WELL-KNOWN Filipino dishes that people commonly cook at home
@@ -41,6 +54,7 @@ IMPORTANT RULES:
 3. DO NOT create unusual, experimental, or creative fusion recipes
 4. Use simple, practical cooking methods that Filipinos actually use
 5. Each recipe should be a dish that Filipino families regularly make
+6. Include nutrition information and health tips for each recipe
 
 Examples of what to suggest:
 - Filipino Spaghetti (sweet style with hotdog)
@@ -63,7 +77,12 @@ Please respond in JSON format with exactly this structure:
       "cookingTime": "X mins",
       "servings": number,
       "cuisine": "Filipino",
-      "difficulty": "Easy/Medium/Hard"
+      "difficulty": "Easy/Medium/Hard",
+      "calories": number,
+      "protein": "Xg",
+      "carbs": "Xg",
+      "fat": "Xg",
+      "healthTips": ["health tip 1", "health tip 2", "health tip 3"]
     },
     {
       "title": "Common Filipino Dish Name 2 (e.g., Carbonara)", 
@@ -73,7 +92,12 @@ Please respond in JSON format with exactly this structure:
       "cookingTime": "X mins", 
       "servings": number,
       "cuisine": "Filipino",
-      "difficulty": "Easy/Medium/Hard"
+      "difficulty": "Easy/Medium/Hard",
+      "calories": number,
+      "protein": "Xg",
+      "carbs": "Xg",
+      "fat": "Xg",
+      "healthTips": ["health tip 1", "health tip 2"]
     },
     {
       "title": "Common Filipino Dish Name 3 (e.g., Adobo)",
@@ -83,12 +107,21 @@ Please respond in JSON format with exactly this structure:
       "cookingTime": "X mins",
       "servings": number,
       "cuisine": "Filipino",
-      "difficulty": "Easy/Medium/Hard"
+      "difficulty": "Easy/Medium/Hard",
+      "calories": number,
+      "protein": "Xg",
+      "carbs": "Xg",
+      "fat": "Xg",
+      "healthTips": ["health tip 1", "health tip 2", "health tip 3"]
     }
   ]
 }
 
-Make sure the response is valid JSON only, no other text. Only suggest REAL, COMMONLY COOKED Filipino dishes that match the ingredients provided.`;
+IMPORTANT: 
+- Make sure the response is valid JSON only, no other text
+- Only suggest REAL, COMMONLY COOKED Filipino dishes that match the ingredients provided
+- Include estimated nutrition info per serving (calories, protein, carbs, fat)
+- Provide 2-3 health tips or nutritional insights for each recipe`;
 
     // Use your available models in priority order
     const models = [

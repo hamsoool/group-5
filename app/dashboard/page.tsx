@@ -25,6 +25,13 @@ interface Recipe {
   prepTime: string;
   cookingTime: string;
   servings: number;
+  cuisine?: string;
+  difficulty?: string;
+  calories?: number;
+  protein?: string;
+  carbs?: string;
+  fat?: string;
+  healthTips?: string[];
 }
 
 export default function DashboardPage() {
@@ -79,6 +86,13 @@ export default function DashboardPage() {
         prepTime: recipe.prepTime,
         cookingTime: recipe.cookingTime,
         servings: recipe.servings,
+        cuisine: recipe.cuisine,
+        difficulty: recipe.difficulty,
+        calories: recipe.calories,
+        protein: recipe.protein,
+        carbs: recipe.carbs,
+        fat: recipe.fat,
+        healthTips: recipe.healthTips,
         createdAt: new Date().toISOString()
       });
       
@@ -228,16 +242,62 @@ export default function DashboardPage() {
                 </ul>
               </div>
 
-              <div>
+              <div className="mb-6">
                 <h3 className="mb-3 text-xl font-semibold text-black dark:text-white">Instructions:</h3>
-                <ol className="list-inside list-decimal space-y-3">
+                <ol className="space-y-3">
                   {selectedRecipe.instructions.map((instruction, index) => (
-                    <li key={index} className="text-zinc-700 dark:text-zinc-300">
-                      {instruction}
+                    <li key={index} className="flex gap-3">
+                      <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black text-xs text-white dark:bg-white dark:text-black">
+                        {index + 1}
+                      </span>
+                      <span className="text-zinc-700 dark:text-zinc-300">{instruction}</span>
                     </li>
                   ))}
                 </ol>
               </div>
+
+              {/* Nutrition Information in Modal */}
+              {selectedRecipe.calories && (
+                <div className="mb-6 rounded-md bg-green-50 p-4 dark:bg-green-900/20">
+                  <h3 className="mb-3 text-xl font-semibold text-green-800 dark:text-green-200">Nutrition (per serving)</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="font-medium text-green-700 dark:text-green-300">Calories:</span>{' '}
+                      <span className="text-green-600 dark:text-green-400">{selectedRecipe.calories} kcal</span>
+                    </div>
+                    {selectedRecipe.protein && (
+                      <div>
+                        <span className="font-medium text-green-700 dark:text-green-300">Protein:</span>{' '}
+                        <span className="text-green-600 dark:text-green-400">{selectedRecipe.protein}</span>
+                      </div>
+                    )}
+                    {selectedRecipe.carbs && (
+                      <div>
+                        <span className="font-medium text-green-700 dark:text-green-300">Carbs:</span>{' '}
+                        <span className="text-green-600 dark:text-green-400">{selectedRecipe.carbs}</span>
+                      </div>
+                    )}
+                    {selectedRecipe.fat && (
+                      <div>
+                        <span className="font-medium text-green-700 dark:text-green-300">Fat:</span>{' '}
+                        <span className="text-green-600 dark:text-green-400">{selectedRecipe.fat}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Health Tips in Modal */}
+              {selectedRecipe.healthTips && selectedRecipe.healthTips.length > 0 && (
+                <div className="mb-6 rounded-md bg-blue-50 p-4 dark:bg-blue-900/20">
+                  <h3 className="mb-3 text-xl font-semibold text-blue-800 dark:text-blue-200">Health Tips</h3>
+                  <ul className="list-inside list-disc space-y-2 text-blue-800 dark:text-blue-200">
+                    {selectedRecipe.healthTips.map((tip, tipIdx) => (
+                      <li key={tipIdx}>{tip}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <button
                 onClick={() => setSelectedRecipe(null)}

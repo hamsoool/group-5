@@ -12,6 +12,11 @@ interface Recipe {
   servings: number;
   cuisine?: string;
   difficulty?: string;
+  calories?: number;
+  protein?: string;
+  carbs?: string;
+  fat?: string;
+  healthTips?: string[];
 }
 
 interface RecipeResponse {
@@ -34,6 +39,12 @@ export default function RecipeGenerator({ ingredients, onSaveRecipe }: RecipeGen
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedRecipes, setSavedRecipes] = useState<Set<string>>(new Set());
+  const [customization, setCustomization] = useState({
+    vegetarian: false,
+    lowSalt: false,
+    budgetFriendly: false,
+  });
+  const [showHealthTips, setShowHealthTips] = useState<Set<number>>(new Set());
 
   const generateRecipe = async () => {
     if (ingredients.length === 0) {
@@ -52,7 +63,10 @@ export default function RecipeGenerator({ ingredients, onSaveRecipe }: RecipeGen
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ingredients }),
+        body: JSON.stringify({ 
+          ingredients,
+          customization 
+        }),
       });
 
       if (!response.ok) {
@@ -88,8 +102,90 @@ export default function RecipeGenerator({ ingredients, onSaveRecipe }: RecipeGen
     }
   };
 
+  const toggleHealthTips = (index: number) => {
+    setShowHealthTips(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const copyRecipe = (recipe: Recipe) => {
+    const text = `${recipe.title}\n\nIngredients:\n${recipe.ingredients.join('\n')}\n\nInstructions:\n${recipe.instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n')}`;
+    navigator.clipboard.writeText(text);
+    alert('Recipe copied to clipboard!');
+  };
+
+  const printRecipe = (recipe: Recipe) => {
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>${recipe.title}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h1 { color: #333; }
+              h2 { color: #666; margin-top: 20px; }
+              ul, ol { margin: 10px 0; }
+              li { margin: 5px 0; }
+            </style>
+          </head>
+          <body>
+            <h1>${recipe.title}</h1>
+            <p><strong>Prep Time:</strong> ${recipe.prepTime} | <strong>Cook Time:</strong> ${recipe.cookingTime} | <strong>Servings:</strong> ${recipe.servings}</p>
+            <h2>Ingredients</h2>
+            <ul>${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}</ul>
+            <h2>Instructions</h2>
+            <ol>${recipe.instructions.map(inst => `<li>${inst}</li>`).join('')}</ol>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Recipe Customization Filters */}
+      <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <h3 className="mb-3 font-semibold text-black dark:text-white">Recipe Preferences</h3>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={customization.vegetarian}
+              onChange={(e) => setCustomization({ ...customization, vegetarian: e.target.checked })}
+              className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-700"
+            />
+            <span className="text-sm text-zinc-700 dark:text-zinc-300">Vegetarian</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={customization.lowSalt}
+              onChange={(e) => setCustomization({ ...customization, lowSalt: e.target.checked })}
+              className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-700"
+            />
+            <span className="text-sm text-zinc-700 dark:text-zinc-300">Low Salt</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={customization.budgetFriendly}
+              onChange={(e) => setCustomization({ ...customization, budgetFriendly: e.target.checked })}
+              className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-700"
+            />
+            <span className="text-sm text-zinc-700 dark:text-zinc-300">Budget-Friendly</span>
+          </label>
+        </div>
+      </div>
+
       <button
         onClick={generateRecipe}
         disabled={ingredients.length === 0 || loading}
@@ -154,17 +250,88 @@ export default function RecipeGenerator({ ingredients, onSaveRecipe }: RecipeGen
 
               <div className="mb-4">
                 <h5 className="mb-2 font-semibold text-black dark:text-white">Instructions:</h5>
-                <ol className="list-inside list-decimal space-y-2">
-                  {recipe.instructions && recipe.instructions.length > 0 ? (
-                    recipe.instructions.map((instruction, idx) => (
-                      <li key={idx} className="text-zinc-700 dark:text-zinc-300">
-                        {instruction}
+                {recipe.instructions && recipe.instructions.length > 0 ? (
+                  <ol className="space-y-3">
+                    {recipe.instructions.map((instruction, idx) => (
+                      <li key={idx} className="flex gap-3">
+                        <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black text-xs text-white dark:bg-white dark:text-black">
+                          {idx + 1}
+                        </span>
+                        <span className="text-zinc-700 dark:text-zinc-300">{instruction}</span>
                       </li>
-                    ))
-                  ) : (
-                    <li className="text-zinc-500">No instructions listed</li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-zinc-500">No instructions available</p>
+                )}
+              </div>
+
+              {/* Nutrition Information */}
+              {recipe.calories && (
+                <div className="mb-4 rounded-md bg-green-50 p-3 dark:bg-green-900/20">
+                  <h5 className="mb-2 font-semibold text-green-800 dark:text-green-200">Nutrition (per serving)</h5>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="font-medium text-green-700 dark:text-green-300">Calories:</span>{' '}
+                      <span className="text-green-600 dark:text-green-400">{recipe.calories} kcal</span>
+                    </div>
+                    {recipe.protein && (
+                      <div>
+                        <span className="font-medium text-green-700 dark:text-green-300">Protein:</span>{' '}
+                        <span className="text-green-600 dark:text-green-400">{recipe.protein}</span>
+                      </div>
+                    )}
+                    {recipe.carbs && (
+                      <div>
+                        <span className="font-medium text-green-700 dark:text-green-300">Carbs:</span>{' '}
+                        <span className="text-green-600 dark:text-green-400">{recipe.carbs}</span>
+                      </div>
+                    )}
+                    {recipe.fat && (
+                      <div>
+                        <span className="font-medium text-green-700 dark:text-green-300">Fat:</span>{' '}
+                        <span className="text-green-600 dark:text-green-400">{recipe.fat}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Health Tips Toggle */}
+              {recipe.healthTips && recipe.healthTips.length > 0 && (
+                <div className="mb-4">
+                  <button
+                    onClick={() => toggleHealthTips(index)}
+                    className="mb-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    {showHealthTips.has(index) ? '▼ Hide Health Tips' : '▶ Show Health Tips'}
+                  </button>
+                  {showHealthTips.has(index) && (
+                    <div className="rounded-md bg-blue-50 p-3 dark:bg-blue-900/20">
+                      <ul className="list-inside list-disc space-y-1 text-sm text-blue-800 dark:text-blue-200">
+                        {recipe.healthTips.map((tip, tipIdx) => (
+                          <li key={tipIdx}>{tip}</li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
-                </ol>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="mb-4 flex gap-2">
+                <button
+                  onClick={() => printRecipe(recipe)}
+                  className="flex-1 rounded-md border border-zinc-300 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  🖨️ Print
+                </button>
+                <button
+                  onClick={() => copyRecipe(recipe)}
+                  className="flex-1 rounded-md border border-zinc-300 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  📋 Copy
+                </button>
               </div>
 
               {onSaveRecipe && (
