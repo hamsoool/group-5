@@ -4,7 +4,10 @@ import { ThemeProvider } from "./components/theme-provider";
 
 export const metadata: Metadata = {
   title: "CookBot - AI Recipe Generator",
-  description: "Discover delicious recipes using ingredients you already have. Reduce food waste and make meal planning effortless.",
+  description:
+    "Discover delicious recipes using ingredients you already have. Reduce food waste and make meal planning effortless.",
+  viewport:
+    "width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes",
 };
 
 export default function RootLayout({
@@ -14,7 +17,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes"
+        />
+      </head>
+      <body className="overflow-x-hidden">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
