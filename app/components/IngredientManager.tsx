@@ -1,6 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Plus, X } from 'lucide-react';
+import { Input } from './ui/input';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Card, CardContent } from './ui/card';
 
 interface Ingredient {
   id: string;
@@ -33,12 +38,9 @@ export default function IngredientManager({ onIngredientsChange }: IngredientMan
     type: 'other'
   });
 
-  const MAX_INGREDIENTS = 3;
+  const MIN_INGREDIENTS = 3;
 
   const addIngredient = () => {
-    if (ingredients.length >= MAX_INGREDIENTS) {
-      return;
-    }
     if (newIngredient.name && newIngredient.quantity) {
       setIngredients([
         ...ingredients,
@@ -63,35 +65,37 @@ export default function IngredientManager({ onIngredientsChange }: IngredientMan
 
   return (
     <div className="space-y-4">
-      <div className="mb-3 rounded-md bg-blue-50 p-3 dark:bg-blue-900/20">
-        <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-          Add 3 main ingredients ({ingredients.length}/{MAX_INGREDIENTS})
-        </p>
-      </div>
+      <Card className={`border-blue-100 dark:border-blue-900 ${ingredients.length < MIN_INGREDIENTS ? 'bg-blue-50/80 dark:bg-blue-950/30' : 'bg-green-50/80 dark:bg-green-950/30 border-green-100 dark:border-green-900'}`}>
+        <CardContent className="pt-6">
+          <p className={`text-sm font-medium ${ingredients.length < MIN_INGREDIENTS ? 'text-blue-800 dark:text-blue-200' : 'text-green-800 dark:text-green-200'}`}>
+            {ingredients.length < MIN_INGREDIENTS 
+              ? `Add at least ${MIN_INGREDIENTS} main ingredients (${ingredients.length}/${MIN_INGREDIENTS})`
+              : `Great! You have ${ingredients.length} ingredient${ingredients.length > 1 ? 's' : ''}. You can add more if needed.`
+            }
+          </p>
+        </CardContent>
+      </Card>
       
       <div className="space-y-2">
-        <input
+        <Input
           type="text"
           placeholder="Ingredient name"
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800"
           value={newIngredient.name}
           onChange={(e) => setNewIngredient({ ...newIngredient, name: e.target.value })}
-          disabled={ingredients.length >= MAX_INGREDIENTS}
+          className="shadow-sm"
         />
         <div className="flex gap-2">
-          <input
+          <Input
             type="number"
             placeholder="Amount"
-            className="w-24 rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800"
+            className="w-24 shadow-sm"
             value={newIngredient.quantity || ''}
             onChange={(e) => setNewIngredient({ ...newIngredient, quantity: parseFloat(e.target.value) })}
-            disabled={ingredients.length >= MAX_INGREDIENTS}
           />
           <select
-            className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800"
+            className="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             value={newIngredient.unit}
             onChange={(e) => setNewIngredient({ ...newIngredient, unit: e.target.value })}
-            disabled={ingredients.length >= MAX_INGREDIENTS}
           >
             {UNITS.map((unit) => (
               <option key={unit} value={unit}>
@@ -100,10 +104,9 @@ export default function IngredientManager({ onIngredientsChange }: IngredientMan
             ))}
           </select>
           <select
-            className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800"
+            className="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             value={newIngredient.type}
             onChange={(e) => setNewIngredient({ ...newIngredient, type: e.target.value as IngredientType })}
-            disabled={ingredients.length >= MAX_INGREDIENTS}
           >
             {TYPES.map((type) => (
               <option key={type} value={type}>
@@ -113,35 +116,38 @@ export default function IngredientManager({ onIngredientsChange }: IngredientMan
           </select>
         </div>
       </div>
-      <button
+      <Button
         onClick={addIngredient}
-        disabled={ingredients.length >= MAX_INGREDIENTS}
-        className="w-full rounded-md bg-black py-2 text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+        disabled={!newIngredient.name || !newIngredient.quantity}
+        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all"
+        size="lg"
       >
-        {ingredients.length >= MAX_INGREDIENTS ? 'Max Ingredients Reached' : 'Add Ingredient'}
-      </button>
+        <Plus className="w-4 h-4 mr-2" />
+        Add Ingredient
+      </Button>
 
-      <ul className="max-h-64 space-y-2 overflow-y-auto">
-        {ingredients.map((ingredient) => (
-          <li
-            key={ingredient.id}
-            className="flex justify-between items-center rounded-md border border-zinc-200 p-2 dark:border-zinc-800"
-          >
-            <span>{ingredient.name}</span>
-            <div className="flex items-center gap-2">
-              <span className="text-zinc-500 text-sm">
-                {ingredient.quantity} {ingredient.unit} ({ingredient.type})
+      {ingredients.length > 0 && (
+        <div className="space-y-2">
+          {ingredients.map((ingredient) => (
+            <Badge
+              key={ingredient.id}
+              variant="secondary"
+              className="w-full justify-between px-3.5 py-2 cursor-pointer hover:bg-secondary/80 transition-colors shadow-sm"
+            >
+              <span className="tracking-wide">
+                {ingredient.name} - {ingredient.quantity} {ingredient.unit} ({ingredient.type})
               </span>
               <button
                 onClick={() => removeIngredient(ingredient.id)}
-                className="text-red-500 hover:text-red-700 text-sm"
+                className="ml-2.5 hover:text-destructive transition-colors"
+                aria-label={`Remove ${ingredient.name}`}
               >
-                Remove
+                <X className="w-3.5 h-3.5" strokeWidth={2} />
               </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+            </Badge>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

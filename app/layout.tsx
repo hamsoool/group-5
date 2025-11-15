@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from "./components/theme-provider";
 
 export const metadata: Metadata = {
-  title: "CookBot",
-  description: "AI-powered recipe generator",
+  title: "CookBot - AI Recipe Generator",
+  description: "Discover delicious recipes using ingredients you already have. Reduce food waste and make meal planning effortless.",
 };
 
 export default function RootLayout({
@@ -12,8 +13,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

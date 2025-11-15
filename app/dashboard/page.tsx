@@ -6,8 +6,12 @@ import { useRouter } from 'next/navigation';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
+import { Header } from '@/app/components/Header';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
+import { Button } from '@/app/components/ui/button';
+import { Sparkles, Lightbulb, Leaf, LogOut, Trash2, Home, List, BookOpen, Wand2, Heart, User } from 'lucide-react';
 import IngredientManager from '@/app/components/IngredientManager';
-import RecipeGenerator from '@/app/components/RecipeGenerator';
+import { RecipeCard } from '@/app/components/RecipeCard';
 
 interface Ingredient {
   id: string;
@@ -18,12 +22,12 @@ interface Ingredient {
 }
 
 interface Recipe {
-  id: string;
+  id?: string;
   title: string;
   ingredients: string[];
   instructions: string[];
   prepTime: string;
-  cookingTime: string;
+  cookingTime?: string;
   servings: number;
   cuisine?: string;
   difficulty?: string;
@@ -32,7 +36,141 @@ interface Recipe {
   carbs?: string;
   fat?: string;
   healthTips?: string[];
+  description?: string;
 }
+
+// Suggested Filipino Recipes
+const suggestedFilipinoRecipes: Recipe[] = [
+  {
+    title: "Chicken Adobo",
+    description: "The Philippines' national dish - tender chicken braised in soy sauce, vinegar, and garlic",
+    ingredients: [
+      "1 kg chicken, cut into serving pieces",
+      "1/2 cup soy sauce",
+      "1/2 cup white vinegar",
+      "1 head garlic, crushed",
+      "1 tsp whole black peppercorns",
+      "3 bay leaves",
+      "1 cup water"
+    ],
+    instructions: [
+      "Combine chicken, soy sauce, and garlic in a pot. Marinate for at least 30 minutes.",
+      "Add water and bring to a boil. Lower heat and simmer for 30 minutes.",
+      "Add vinegar and peppercorns. Simmer for another 10 minutes.",
+      "Add bay leaves and continue cooking until chicken is tender.",
+      "Increase heat to reduce sauce until thick and oily. Serve hot with rice."
+    ],
+    prepTime: "15 mins",
+    cookingTime: "45 mins",
+    servings: 4,
+    difficulty: "Easy",
+    cuisine: "Filipino",
+    calories: 320,
+    protein: "35g",
+    carbs: "8g",
+    fat: "15g"
+  },
+  {
+    title: "Sinigang na Baboy",
+    description: "Sour and savory pork soup with vegetables, a Filipino comfort food favorite",
+    ingredients: [
+      "500g pork ribs or belly",
+      "1 packet sinigang mix (tamarind soup base)",
+      "1 large tomato, quartered",
+      "1 medium onion, quartered",
+      "2 cups kangkong (water spinach)",
+      "1 cup string beans, cut into 2-inch pieces",
+      "1 medium radish, sliced",
+      "2 pieces green chili",
+      "6 cups water"
+    ],
+    instructions: [
+      "Boil pork in water until tender, about 45 minutes.",
+      "Add tomato and onion. Simmer for 5 minutes.",
+      "Add sinigang mix and stir until dissolved.",
+      "Add radish and string beans. Cook for 5 minutes.",
+      "Add kangkong and green chili. Simmer for 2 minutes.",
+      "Season with salt if needed. Serve hot with rice."
+    ],
+    prepTime: "20 mins",
+    cookingTime: "60 mins",
+    servings: 4,
+    difficulty: "Easy",
+    cuisine: "Filipino",
+    calories: 280,
+    protein: "28g",
+    carbs: "12g",
+    fat: "12g"
+  },
+  {
+    title: "Kare-Kare",
+    description: "Rich oxtail stew in peanut sauce, traditionally served with bagoong (shrimp paste)",
+    ingredients: [
+      "1 kg oxtail, cut into serving pieces",
+      "1/2 cup peanut butter",
+      "1/4 cup ground toasted rice",
+      "2 cups string beans, cut into 2-inch pieces",
+      "2 cups eggplant, sliced",
+      "1 cup banana heart, sliced",
+      "1/2 cup annatto seeds (achuete)",
+      "6 cups water",
+      "Salt to taste"
+    ],
+    instructions: [
+      "Boil oxtail until very tender, about 2-3 hours. Reserve broth.",
+      "Soak annatto seeds in hot water to extract color. Strain.",
+      "In a pot, heat annatto oil. Add oxtail and sauté.",
+      "Add peanut butter and ground rice. Stir well.",
+      "Pour in reserved broth. Simmer until thick.",
+      "Add vegetables and cook until tender. Season with salt.",
+      "Serve with bagoong on the side."
+    ],
+    prepTime: "30 mins",
+    cookingTime: "180 mins",
+    servings: 6,
+    difficulty: "Medium",
+    cuisine: "Filipino",
+    calories: 450,
+    protein: "42g",
+    carbs: "18g",
+    fat: "22g"
+  },
+  {
+    title: "Pancit Canton",
+    description: "Stir-fried noodles with vegetables and meat, a staple at Filipino celebrations",
+    ingredients: [
+      "500g pancit canton (egg noodles)",
+      "250g pork, sliced",
+      "250g chicken, sliced",
+      "1 cup shrimp, shelled",
+      "2 cups cabbage, shredded",
+      "1 cup carrots, julienned",
+      "1 cup green beans, sliced",
+      "1/2 cup soy sauce",
+      "1/4 cup oyster sauce",
+      "1 head garlic, minced",
+      "1 medium onion, sliced"
+    ],
+    instructions: [
+      "Soak noodles in warm water for 10 minutes. Drain.",
+      "Heat oil in a wok. Sauté garlic and onion.",
+      "Add pork and chicken. Cook until browned.",
+      "Add shrimp and cook until pink.",
+      "Add vegetables and stir-fry for 2 minutes.",
+      "Add noodles, soy sauce, and oyster sauce.",
+      "Toss everything together until well combined. Serve hot."
+    ],
+    prepTime: "20 mins",
+    cookingTime: "20 mins",
+    servings: 6,
+    difficulty: "Easy",
+    cuisine: "Filipino",
+    calories: 380,
+    protein: "25g",
+    carbs: "45g",
+    fat: "12g"
+  }
+];
 
 export default function DashboardPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -40,7 +178,16 @@ export default function DashboardPage() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [generatedRecipes, setGeneratedRecipes] = useState<Recipe[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
   const router = useRouter();
+
+  // Filter states
+  const [dishType, setDishType] = useState<string>('Lunch');
+  const [diet, setDiet] = useState<string>('Vegetarian');
+  const [time, setTime] = useState<string>('< 30 min');
+  const [goal, setGoal] = useState<string>('Budget');
+  const [activeTab, setActiveTab] = useState<'home' | 'ingredients' | 'recipes' | 'profile'>('home');
 
   // Check authentication and load recipes
   useEffect(() => {
@@ -86,13 +233,14 @@ export default function DashboardPage() {
         prepTime: recipe.prepTime,
         cookingTime: recipe.cookingTime,
         servings: recipe.servings,
-        cuisine: recipe.cuisine,
+        cuisine: recipe.cuisine || 'Filipino',
         difficulty: recipe.difficulty,
         calories: recipe.calories,
         protein: recipe.protein,
         carbs: recipe.carbs,
         fat: recipe.fat,
         healthTips: recipe.healthTips,
+        description: recipe.description,
         createdAt: new Date().toISOString()
       });
       
@@ -102,6 +250,7 @@ export default function DashboardPage() {
       } as Recipe;
       
       setSavedRecipes([...savedRecipes, newRecipe]);
+      alert('Recipe saved successfully!');
     } catch (error) {
       console.error('Error saving recipe:', error);
       alert('Failed to save recipe. Please try again.');
@@ -118,6 +267,7 @@ export default function DashboardPage() {
   };
 
   const handleDeleteRecipe = async (id: string) => {
+    if (!id) return;
     try {
       await deleteDoc(doc(db, 'recipes', id));
       setSavedRecipes(savedRecipes.filter(r => r.id !== id));
@@ -127,81 +277,500 @@ export default function DashboardPage() {
     }
   };
 
-  return (
-    <div className="flex min-h-screen flex-col items-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-6xl flex-col items-center px-6 py-16 sm:px-16">
-        <div className="mb-6 flex w-full items-center justify-between">
-          <div>
-            <h1 className="text-5xl font-bold text-black dark:text-zinc-50">
-              Welcome to CookBot!
-            </h1>
-            {user && (
-              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                Logged in as: {user.email}
-              </p>
-            )}
+  const handleGenerateRecipe = async () => {
+    if (ingredients.length < 3) {
+      alert('Please add at least 3 main ingredients to generate recipes');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const customization = {
+        vegetarian: diet === 'Vegetarian' || diet === 'Vegan',
+        lowSalt: false,
+        budgetFriendly: goal === 'Budget'
+      };
+
+      const response = await fetch('/api/generate-recipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          ingredients,
+          customization 
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data || !data.recipes || !Array.isArray(data.recipes) || data.recipes.length === 0) {
+        throw new Error('Invalid recipe format received');
+      }
+      
+      setGeneratedRecipes(data.recipes);
+      setActiveTab('recipes');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to generate recipes';
+      alert(message);
+      console.error('Recipe generation error:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const removeIngredient = (id: string) => {
+    setIngredients(ingredients.filter(ing => ing.id !== id));
+  };
+
+  const getIngredientImage = (name: string) => {
+    return `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&h=100&fit=crop&q=80`;
+  };
+
+  const getIngredientCalories = (name: string) => {
+    const calories: { [key: string]: number } = {
+      'chicken': 165,
+      'rice': 130,
+      'tomato': 18,
+      'potato': 77,
+      'onion': 40,
+      'garlic': 149,
+      'pork': 242,
+      'fish': 206,
+    };
+    return calories[name.toLowerCase()] || 100;
+  };
+
+  // Render Home Tab
+  const renderHomeTab = () => (
+    <>
+      {/* Build Your Recipe Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight text-center mb-6">Build Your Recipe</h1>
+        
+        {/* Ingredients Section */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold">Ingredients</span>
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold">
+              {ingredients.length}
+            </span>
           </div>
-          <button
-            onClick={handleSignOut}
-            className="rounded-md bg-red-500 px-4 py-2 text-white transition-colors hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
-          >
-            Logout
-          </button>
+          {ingredients.length > 0 && (
+            <button 
+              onClick={() => setActiveTab('ingredients')}
+              className="text-sm text-orange-600 dark:text-orange-400 hover:underline"
+            >
+              See all
+            </button>
+          )}
         </div>
-        <p className="mb-8 max-w-2xl text-xl text-zinc-600 dark:text-zinc-400">
-          Start generating recipes below by adding ingredients.
-        </p>
 
-        <div className="grid w-full max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
-            <h2 className="mb-4 text-2xl font-bold">Add Ingredients</h2>
-            <IngredientManager onIngredientsChange={setIngredients} />
-          </div>
-
-          <div className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
-            <h2 className="mb-4 text-2xl font-bold">Generate Recipe</h2>
-            <RecipeGenerator ingredients={ingredients} onSaveRecipe={handleSaveRecipe} />
-          </div>
-
-          <div className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800 md:col-span-2 lg:col-span-1">
-            <h2 className="mb-4 text-2xl font-bold">Saved Recipes ({savedRecipes.length})</h2>
-            <div className="max-h-96 space-y-3 overflow-y-auto">
-              {loading ? (
-                <p className="text-zinc-600 dark:text-zinc-400">Loading recipes...</p>
-              ) : savedRecipes.length === 0 ? (
-                <p className="text-zinc-600 dark:text-zinc-400">No saved recipes yet.</p>
-              ) : (
-                savedRecipes.map((recipe) => (
-                  <div
-                    key={recipe.id}
-                    className="rounded-md border border-zinc-200 p-3 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800/50"
+        {/* Horizontal Scrollable Ingredient Cards */}
+        {ingredients.length > 0 ? (
+          <div className="flex gap-3 overflow-x-auto pb-2 mb-6 scrollbar-hide">
+            {ingredients.map((ingredient) => (
+              <div
+                key={ingredient.id}
+                className="flex-shrink-0 w-32 bg-white dark:bg-card rounded-xl shadow-sm border border-border overflow-hidden"
+              >
+                <div className="relative h-24 bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30">
+                  <img
+                    src={getIngredientImage(ingredient.name)}
+                    alt={ingredient.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  <button
+                    onClick={() => removeIngredient(ingredient.id)}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 dark:bg-card/90 flex items-center justify-center shadow-sm hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                   >
-                    <div className="flex items-start justify-between">
-                      <button
-                        onClick={() => setSelectedRecipe(recipe)}
-                        className="flex-1 text-left"
-                      >
-                        <h3 className="font-semibold text-black dark:text-white">{recipe.title}</h3>
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                          {recipe.servings} servings • {recipe.prepTime}
-                        </p>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteRecipe(recipe.id);
-                        }}
-                        className="ml-2 text-red-500 hover:text-red-700 dark:text-red-400"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                  </button>
+                </div>
+                <div className="p-2">
+                  <p className="text-xs font-semibold truncate">{ingredient.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {getIngredientCalories(ingredient.name)} avg. calories per 100g
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mb-6">
+            <Card className="border-none shadow-sm dark:bg-card/50">
+              <CardContent className="pt-6">
+                <IngredientManager onIngredientsChange={setIngredients} />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Recipe Filters */}
+      <div className="space-y-6 mb-8">
+        {/* Dish Type */}
+        <div>
+          <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Dish Type</h3>
+          <div className="flex gap-2 flex-wrap">
+            {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Brunch', 'Dessert'].map((type) => (
+              <button
+                key={type}
+                onClick={() => setDishType(type)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  dishType === type
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                    : 'bg-amber-50 dark:bg-amber-950/30 text-foreground hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                }`}
+              >
+                {type}
+              </button>
+            ))}
           </div>
         </div>
+
+        {/* Diet */}
+        <div>
+          <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Diet</h3>
+          <div className="flex gap-2 flex-wrap">
+            {['Vegetarian', 'Vegan', 'Keto', 'Paleo', 'Low-Carb', 'Pescatarian'].map((dietType) => (
+              <button
+                key={dietType}
+                onClick={() => setDiet(dietType)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  diet === dietType
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                    : 'bg-amber-50 dark:bg-amber-950/30 text-foreground hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                }`}
+              >
+                {dietType}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Time */}
+        <div>
+          <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Time</h3>
+          <div className="flex gap-2 flex-wrap">
+            {['< 15 min', '< 30 min', '< 60 min'].map((timeOption) => (
+              <button
+                key={timeOption}
+                onClick={() => setTime(timeOption)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  time === timeOption
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                    : 'bg-amber-50 dark:bg-amber-950/30 text-foreground hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                }`}
+              >
+                {timeOption}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Goal */}
+        <div>
+          <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Goal</h3>
+          <div className="flex gap-2 flex-wrap">
+            {['Eat Healthy', 'Planning', 'Budget'].map((goalOption) => (
+              <button
+                key={goalOption}
+                onClick={() => setGoal(goalOption)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  goal === goalOption
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                    : 'bg-amber-50 dark:bg-amber-950/30 text-foreground hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                }`}
+              >
+                {goalOption}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Generate Recipe Button */}
+      <div className="mb-8">
+         <Button
+           onClick={handleGenerateRecipe}
+           disabled={ingredients.length < 3 || isGenerating}
+           className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transition-all h-12 text-base font-semibold"
+           size="lg"
+         >
+          {isGenerating ? (
+            <>
+              <Sparkles className="w-5 h-5 mr-2 animate-spin" />
+              Generating Recipe...
+            </>
+          ) : (
+            <>
+              <Wand2 className="w-5 h-5 mr-2" />
+              Generate Recipe
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Generated Recipes Display */}
+      {generatedRecipes.length > 0 && (
+        <div className="space-y-6 mb-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold tracking-tight">Your Recipes</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setGeneratedRecipes([])}
+              className="border-orange-200 hover:bg-orange-50 dark:border-orange-800 dark:hover:bg-orange-950/30"
+            >
+              Clear
+            </Button>
+          </div>
+          {generatedRecipes.map((recipe, index) => (
+            <div key={index} className="space-y-4">
+              <RecipeCard recipe={recipe} />
+              <Button
+                onClick={() => handleSaveRecipe(recipe)}
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md text-white"
+              >
+                <Heart className="w-4 h-4 mr-2" />
+                Save This Recipe
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  // Render Ingredients Tab
+  const renderIngredientsTab = () => (
+    <div className="mb-8">
+      <h1 className="text-3xl font-bold tracking-tight mb-6">My Ingredients</h1>
+      <Card className="border-none shadow-md dark:bg-card/50">
+        <CardHeader>
+          <CardTitle className="tracking-tight">Add Ingredients</CardTitle>
+           <CardDescription className="text-muted-foreground/80 leading-relaxed">
+             Add at least 3 main ingredients (you can add more as needed)
+           </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <IngredientManager onIngredientsChange={setIngredients} />
+        </CardContent>
+      </Card>
+
+      {ingredients.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-xl font-semibold mb-4">Current Ingredients ({ingredients.length})</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {ingredients.map((ingredient) => (
+              <Card
+                key={ingredient.id}
+                className="border-none shadow-sm dark:bg-card/50 overflow-hidden"
+              >
+                <div className="relative h-32 bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30">
+                  <img
+                    src={getIngredientImage(ingredient.name)}
+                    alt={ingredient.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  <button
+                    onClick={() => removeIngredient(ingredient.id)}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white/90 dark:bg-card/90 flex items-center justify-center shadow-sm hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                  </button>
+                </div>
+                <CardContent className="p-3">
+                  <p className="font-semibold text-sm truncate">{ingredient.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {ingredient.quantity} {ingredient.unit}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {getIngredientCalories(ingredient.name)} cal/100g
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Render Profile Tab
+  const renderProfileTab = () => (
+    <div className="mb-8">
+      <h1 className="text-3xl font-bold tracking-tight mb-6">My Profile</h1>
+      
+      <div className="space-y-6">
+        {/* User Info Card */}
+        <Card className="border-none shadow-md dark:bg-card/50">
+          <CardHeader>
+            <CardTitle className="tracking-tight">Account Information</CardTitle>
+            <CardDescription className="text-muted-foreground/80 leading-relaxed">
+              Your account details and preferences
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-md">
+                <User className="w-10 h-10 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold tracking-tight">
+                  {user?.displayName || 'User'}
+                </h3>
+                <p className="text-muted-foreground/80">{user?.email}</p>
+              </div>
+            </div>
+            
+            <div className="pt-4 border-t border-border space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground/80">User ID</span>
+                <span className="text-sm font-mono text-foreground/70">{user?.uid?.substring(0, 8)}...</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground/80">Saved Recipes</span>
+                <span className="text-sm font-semibold text-foreground">{savedRecipes.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground/80">Current Ingredients</span>
+                <span className="text-sm font-semibold text-foreground">{ingredients.length}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Statistics Card */}
+        <Card className="border-none shadow-md dark:bg-card/50">
+          <CardHeader>
+            <CardTitle className="tracking-tight">Your Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-lg bg-orange-50/80 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900">
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{savedRecipes.length}</div>
+                <div className="text-sm text-muted-foreground/80">Favorite Recipes</div>
+              </div>
+              <div className="p-4 rounded-lg bg-green-50/80 dark:bg-green-950/30 border border-green-100 dark:border-green-900">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{ingredients.length}</div>
+                <div className="text-sm text-muted-foreground/80">Ingredients Added</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Logout Button */}
+        <Card className="border-none shadow-md dark:bg-card/50">
+          <CardContent className="pt-6">
+            <Button
+              onClick={handleSignOut}
+              className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all"
+              size="lg"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
+  // Render Recipes Tab
+  const renderRecipesTab = () => (
+    <div className="mb-8 space-y-8">
+      {/* Saved Recipes Section */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight mb-6">My Favorite Recipes</h1>
+        {loading ? (
+          <Card className="border-none shadow-sm dark:bg-card/50">
+            <CardContent className="pt-6 text-center">
+              <p className="text-muted-foreground/80">Loading recipes...</p>
+            </CardContent>
+          </Card>
+        ) : savedRecipes.length === 0 ? (
+          <Card className="border-none shadow-sm dark:bg-card/50">
+            <CardContent className="pt-6 text-center">
+              <p className="text-muted-foreground/80">No saved recipes yet. Start generating recipes to save your favorites!</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {savedRecipes.map((recipe) => (
+              <Card
+                key={recipe.id}
+                className="border-none shadow-sm dark:bg-card/50 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setSelectedRecipe(recipe)}
+              >
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold tracking-tight mb-1">{recipe.title}</h3>
+                      <p className="text-sm text-muted-foreground/80">
+                        {recipe.servings} servings • {recipe.prepTime}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (recipe.id) handleDeleteRecipe(recipe.id);
+                      }}
+                      className="ml-2 text-destructive hover:text-destructive/80"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Suggested Filipino Recipes Section */}
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight mb-4">Suggested Filipino Recipes 🇵🇭</h2>
+        <p className="text-muted-foreground/80 mb-6">Popular Filipino dishes you might enjoy</p>
+        <div className="space-y-6">
+          {suggestedFilipinoRecipes.map((recipe, index) => (
+            <div key={index} className="space-y-4">
+              <RecipeCard recipe={recipe} />
+              <Button
+                onClick={() => handleSaveRecipe(recipe)}
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md text-white"
+              >
+                <Heart className="w-4 h-4 mr-2" />
+                Save to Favorites
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-orange-50/40 via-white to-white dark:from-orange-950/20 dark:via-background dark:to-background pb-24">
+      <Header />
+      
+      <main className="container mx-auto px-4 sm:px-6 py-6 max-w-6xl">
+        {activeTab === 'home' && renderHomeTab()}
+        {activeTab === 'ingredients' && renderIngredientsTab()}
+        {activeTab === 'recipes' && renderRecipesTab()}
+        {activeTab === 'profile' && renderProfileTab()}
 
         {/* Recipe Detail Modal */}
         {selectedRecipe && (
@@ -210,105 +779,167 @@ export default function DashboardPage() {
             onClick={() => setSelectedRecipe(null)}
           >
             <div
-              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 dark:bg-zinc-900"
+              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-card border border-border shadow-lg"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="mb-4 flex items-start justify-between">
-                <h2 className="text-3xl font-bold text-black dark:text-white">
-                  {selectedRecipe.title}
-                </h2>
-                <button
-                  onClick={() => setSelectedRecipe(null)}
-                  className="text-2xl text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="mb-6 flex gap-4 text-sm text-zinc-600 dark:text-zinc-400">
-                <span>⏱️ Prep: {selectedRecipe.prepTime}</span>
-                <span>🍳 Cook: {selectedRecipe.cookingTime}</span>
-                <span>🍽️ Serves: {selectedRecipe.servings}</span>
-              </div>
-
-              <div className="mb-6">
-                <h3 className="mb-3 text-xl font-semibold text-black dark:text-white">Ingredients:</h3>
-                <ul className="list-inside list-disc space-y-2">
-                  {selectedRecipe.ingredients.map((ingredient, index) => (
-                    <li key={index} className="text-zinc-700 dark:text-zinc-300">
-                      {ingredient}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="mb-6">
-                <h3 className="mb-3 text-xl font-semibold text-black dark:text-white">Instructions:</h3>
-                <ol className="space-y-3">
-                  {selectedRecipe.instructions.map((instruction, index) => (
-                    <li key={index} className="flex gap-3">
-                      <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-black text-xs text-white dark:bg-white dark:text-black">
-                        {index + 1}
-                      </span>
-                      <span className="text-zinc-700 dark:text-zinc-300">{instruction}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-
-              {/* Nutrition Information in Modal */}
-              {selectedRecipe.calories && (
-                <div className="mb-6 rounded-md bg-green-50 p-4 dark:bg-green-900/20">
-                  <h3 className="mb-3 text-xl font-semibold text-green-800 dark:text-green-200">Nutrition (per serving)</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <span className="font-medium text-green-700 dark:text-green-300">Calories:</span>{' '}
-                      <span className="text-green-600 dark:text-green-400">{selectedRecipe.calories} kcal</span>
-                    </div>
-                    {selectedRecipe.protein && (
-                      <div>
-                        <span className="font-medium text-green-700 dark:text-green-300">Protein:</span>{' '}
-                        <span className="text-green-600 dark:text-green-400">{selectedRecipe.protein}</span>
-                      </div>
-                    )}
-                    {selectedRecipe.carbs && (
-                      <div>
-                        <span className="font-medium text-green-700 dark:text-green-300">Carbs:</span>{' '}
-                        <span className="text-green-600 dark:text-green-400">{selectedRecipe.carbs}</span>
-                      </div>
-                    )}
-                    {selectedRecipe.fat && (
-                      <div>
-                        <span className="font-medium text-green-700 dark:text-green-300">Fat:</span>{' '}
-                        <span className="text-green-600 dark:text-green-400">{selectedRecipe.fat}</span>
-                      </div>
-                    )}
-                  </div>
+              <div className="p-6">
+                <div className="mb-4 flex items-start justify-between">
+                  <h2 className="text-3xl font-bold tracking-tight">
+                    {selectedRecipe.title}
+                  </h2>
+                  <button
+                    onClick={() => setSelectedRecipe(null)}
+                    className="text-2xl text-muted-foreground hover:text-foreground"
+                  >
+                    ✕
+                  </button>
                 </div>
-              )}
 
-              {/* Health Tips in Modal */}
-              {selectedRecipe.healthTips && selectedRecipe.healthTips.length > 0 && (
-                <div className="mb-6 rounded-md bg-blue-50 p-4 dark:bg-blue-900/20">
-                  <h3 className="mb-3 text-xl font-semibold text-blue-800 dark:text-blue-200">Health Tips</h3>
-                  <ul className="list-inside list-disc space-y-2 text-blue-800 dark:text-blue-200">
-                    {selectedRecipe.healthTips.map((tip, tipIdx) => (
-                      <li key={tipIdx}>{tip}</li>
+                {selectedRecipe.description && (
+                  <p className="mb-4 text-muted-foreground/80">{selectedRecipe.description}</p>
+                )}
+
+                <div className="mb-6 flex gap-4 text-sm text-muted-foreground/80">
+                  <span>⏱️ Prep: {selectedRecipe.prepTime}</span>
+                  {selectedRecipe.cookingTime && <span>🍳 Cook: {selectedRecipe.cookingTime}</span>}
+                  <span>🍽️ Serves: {selectedRecipe.servings}</span>
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="mb-3 text-xl font-semibold tracking-tight">Ingredients:</h3>
+                  <ul className="list-inside list-disc space-y-2">
+                    {selectedRecipe.ingredients.map((ingredient, index) => (
+                      <li key={index} className="text-foreground/90">
+                        {ingredient}
+                      </li>
                     ))}
                   </ul>
                 </div>
-              )}
 
-              <button
-                onClick={() => setSelectedRecipe(null)}
-                className="mt-6 w-full rounded-md bg-black py-2 text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-              >
-                Close
-              </button>
+                <div className="mb-6">
+                  <h3 className="mb-3 text-xl font-semibold tracking-tight">Instructions:</h3>
+                  <ol className="space-y-3">
+                    {selectedRecipe.instructions.map((instruction, index) => (
+                      <li key={index} className="flex gap-3">
+                        <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-orange-600 text-xs text-white shadow-sm">
+                          {index + 1}
+                        </span>
+                        <span className="text-foreground/90">{instruction}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                {selectedRecipe.calories && (
+                  <div className="mb-6 rounded-md bg-green-50/80 dark:bg-green-950/30 border border-green-100 dark:border-green-900 p-4">
+                    <h3 className="mb-3 text-xl font-semibold text-green-900 dark:text-green-400 tracking-tight">Nutrition (per serving)</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <span className="font-medium text-green-700 dark:text-green-300">Calories:</span>{' '}
+                        <span className="text-green-600 dark:text-green-400">{selectedRecipe.calories} kcal</span>
+                      </div>
+                      {selectedRecipe.protein && (
+                        <div>
+                          <span className="font-medium text-green-700 dark:text-green-300">Protein:</span>{' '}
+                          <span className="text-green-600 dark:text-green-400">{selectedRecipe.protein}</span>
+                        </div>
+                      )}
+                      {selectedRecipe.carbs && (
+                        <div>
+                          <span className="font-medium text-green-700 dark:text-green-300">Carbs:</span>{' '}
+                          <span className="text-green-600 dark:text-green-400">{selectedRecipe.carbs}</span>
+                        </div>
+                      )}
+                      {selectedRecipe.fat && (
+                        <div>
+                          <span className="font-medium text-green-700 dark:text-green-300">Fat:</span>{' '}
+                          <span className="text-green-600 dark:text-green-400">{selectedRecipe.fat}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedRecipe.healthTips && selectedRecipe.healthTips.length > 0 && (
+                  <div className="mb-6 rounded-md bg-blue-50/80 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 p-4">
+                    <h3 className="mb-3 text-xl font-semibold text-blue-900 dark:text-blue-400 tracking-tight">Health Tips</h3>
+                    <ul className="list-inside list-disc space-y-2 text-blue-800 dark:text-blue-200">
+                      {selectedRecipe.healthTips.map((tip, tipIdx) => (
+                        <li key={tipIdx}>{tip}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => setSelectedRecipe(null)}
+                  className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md text-white"
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
         )}
       </main>
+
+      {/* Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-background border-t border-border shadow-lg z-40">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="flex items-center justify-around py-2">
+            <button
+              onClick={() => setActiveTab('home')}
+              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors ${
+                activeTab === 'home' ? 'text-orange-500' : 'text-muted-foreground'
+              }`}
+            >
+              <Home className="w-5 h-5" />
+              <span className="text-xs font-medium">Home</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('ingredients')}
+              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors relative ${
+                activeTab === 'ingredients' ? 'text-orange-500' : 'text-muted-foreground'
+              }`}
+            >
+              <div className="relative">
+                <List className="w-5 h-5" />
+                {ingredients.length > 0 && (
+                  <span className="absolute -top-2 -right-2 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold">
+                    {ingredients.length}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs font-medium">Ingredients</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('recipes')}
+              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors relative ${
+                activeTab === 'recipes' ? 'text-orange-500' : 'text-muted-foreground'
+              }`}
+            >
+              <div className="relative">
+                <BookOpen className="w-5 h-5" />
+                {savedRecipes.length > 0 && (
+                  <span className="absolute -top-2 -right-2 flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold">
+                    {savedRecipes.length}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs font-medium">Recipes</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors ${
+                activeTab === 'profile' ? 'text-orange-500' : 'text-muted-foreground'
+              }`}
+            >
+              <User className="w-5 h-5" />
+              <span className="text-xs font-medium">Profile</span>
+            </button>
+          </div>
+        </div>
+      </nav>
     </div>
   );
 }
