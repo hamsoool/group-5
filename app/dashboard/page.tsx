@@ -189,6 +189,30 @@ export default function DashboardPage() {
   const [goal, setGoal] = useState<string>('Budget');
   const [activeTab, setActiveTab] = useState<'home' | 'ingredients' | 'recipes' | 'profile'>('home');
 
+  // Load ingredients from localStorage on mount
+  useEffect(() => {
+    const savedIngredients = localStorage.getItem('dashboard-ingredients');
+    if (savedIngredients) {
+      try {
+        const parsed = JSON.parse(savedIngredients);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setIngredients(parsed);
+        }
+      } catch (error) {
+        console.error('Error loading ingredients from localStorage:', error);
+      }
+    }
+  }, []);
+
+  // Save ingredients to localStorage whenever they change
+  useEffect(() => {
+    if (ingredients.length > 0) {
+      localStorage.setItem('dashboard-ingredients', JSON.stringify(ingredients));
+    } else {
+      localStorage.removeItem('dashboard-ingredients');
+    }
+  }, [ingredients]);
+
   // Check authentication and load recipes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -372,8 +396,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Horizontal Scrollable Ingredient Cards */}
-        {ingredients.length > 0 ? (
-          <div className="flex gap-3 overflow-x-auto pb-2 mb-6 scrollbar-hide">
+        {ingredients.length > 0 && (
+          <div className="flex gap-3 overflow-x-auto pb-2 mb-4 scrollbar-hide">
             {ingredients.map((ingredient) => (
               <div
                 key={ingredient.id}
@@ -404,15 +428,16 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        ) : (
-          <div className="mb-6">
-            <Card className="border-none shadow-sm dark:bg-card/50">
-              <CardContent className="pt-6">
-                <IngredientManager onIngredientsChange={setIngredients} />
-              </CardContent>
-            </Card>
-          </div>
         )}
+
+        {/* Ingredient Manager - Always visible to add more ingredients */}
+        <div className="mb-6">
+          <Card className="border-none shadow-sm dark:bg-card/50">
+            <CardContent className="pt-6">
+              <IngredientManager ingredients={ingredients} onIngredientsChange={setIngredients} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Recipe Filters */}
@@ -563,7 +588,7 @@ export default function DashboardPage() {
            </CardDescription>
         </CardHeader>
         <CardContent>
-          <IngredientManager onIngredientsChange={setIngredients} />
+          <IngredientManager ingredients={ingredients} onIngredientsChange={setIngredients} />
         </CardContent>
       </Card>
 
