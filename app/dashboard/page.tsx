@@ -792,6 +792,30 @@ export default function DashboardPage() {
             return false;
           }
 
+          // Validate ingredients array
+          if (
+            !Array.isArray(recipe.ingredients) ||
+            recipe.ingredients.length === 0
+          ) {
+            console.warn("Recipe missing ingredients array:", recipe);
+            return false;
+          }
+
+          // Validate instructions array
+          if (
+            !Array.isArray(recipe.instructions) ||
+            recipe.instructions.length === 0
+          ) {
+            console.warn("Recipe missing instructions array:", recipe);
+            return false;
+          }
+
+          // Validate servings
+          if (typeof recipe.servings !== "number" || recipe.servings < 1) {
+            console.warn("Recipe has invalid servings:", recipe);
+            return false;
+          }
+
           return true;
         })
         .map((recipe: any) => {
@@ -868,6 +892,16 @@ export default function DashboardPage() {
         throw new Error(
           "No valid recipes were generated. Please try again with different ingredients."
         );
+      }
+
+      // Log validation info if available
+      if (data.validationInfo) {
+        console.log("API Validation Info:", data.validationInfo);
+        if (data.validationInfo.failedValidations > 0) {
+          console.warn(
+            `${data.validationInfo.failedValidations} recipe(s) failed validation on server`
+          );
+        }
       }
 
       setGeneratedRecipes(sanitizedRecipes);

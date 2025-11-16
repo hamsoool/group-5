@@ -10,6 +10,219 @@ const getErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
+// Response validation schema
+interface ValidatedRecipe {
+  title: string;
+  description?: string;
+  ingredients: string[];
+  instructions: string[];
+  prepTime: string;
+  cookingTime?: string;
+  servings: number;
+  cuisine?: string;
+  difficulty?: string;
+  calories?: number;
+  protein?: string;
+  carbs?: string;
+  fat?: string;
+  healthTips?: string[];
+}
+
+// Comprehensive response validator
+const validateAndCleanRecipeResponse = (recipe: any): { valid: boolean; recipe?: ValidatedRecipe; errors: string[] } => {
+  const errors: string[] = [];
+  
+  // Validate title (required)
+  if (!recipe.title || typeof recipe.title !== 'string') {
+    errors.push('Recipe title is missing or not a string');
+  } else if (recipe.title.trim().length === 0) {
+    errors.push('Recipe title is empty');
+  } else if (recipe.title.length > 200) {
+    errors.push('Recipe title exceeds 200 characters');
+  }
+  
+  // Validate description (optional)
+  if (recipe.description !== undefined && recipe.description !== null) {
+    if (typeof recipe.description !== 'string') {
+      errors.push('Recipe description must be a string');
+    } else if (recipe.description.length > 500) {
+      errors.push('Recipe description exceeds 500 characters');
+    }
+  }
+  
+  // Validate ingredients (required, array of strings)
+  if (!Array.isArray(recipe.ingredients)) {
+    errors.push('Ingredients must be an array');
+  } else if (recipe.ingredients.length === 0) {
+    errors.push('Recipe must have at least one ingredient');
+  } else if (recipe.ingredients.length > 50) {
+    errors.push('Recipe has too many ingredients (max 50)');
+  } else {
+    recipe.ingredients.forEach((ing: any, idx: number) => {
+      if (typeof ing !== 'string' || ing.trim().length === 0) {
+        errors.push(`Ingredient ${idx + 1} is invalid or empty`);
+      } else if (ing.length > 200) {
+        errors.push(`Ingredient ${idx + 1} exceeds 200 characters`);
+      }
+    });
+  }
+  
+  // Validate instructions (required, array of strings)
+  if (!Array.isArray(recipe.instructions)) {
+    errors.push('Instructions must be an array');
+  } else if (recipe.instructions.length === 0) {
+    errors.push('Recipe must have at least one instruction');
+  } else if (recipe.instructions.length > 50) {
+    errors.push('Recipe has too many instructions (max 50)');
+  } else {
+    recipe.instructions.forEach((inst: any, idx: number) => {
+      if (typeof inst !== 'string' || inst.trim().length === 0) {
+        errors.push(`Instruction ${idx + 1} is invalid or empty`);
+      } else if (inst.length > 500) {
+        errors.push(`Instruction ${idx + 1} exceeds 500 characters`);
+      }
+    });
+  }
+  
+  // Validate prepTime (required string)
+  if (!recipe.prepTime || typeof recipe.prepTime !== 'string') {
+    errors.push('Prep time is required and must be a string');
+  } else if (recipe.prepTime.length > 50) {
+    errors.push('Prep time exceeds 50 characters');
+  }
+  
+  // Validate cookingTime (optional string)
+  if (recipe.cookingTime !== undefined && recipe.cookingTime !== null) {
+    if (typeof recipe.cookingTime !== 'string') {
+      errors.push('Cooking time must be a string');
+    } else if (recipe.cookingTime.length > 50) {
+      errors.push('Cooking time exceeds 50 characters');
+    }
+  }
+  
+  // Validate servings (required number)
+  if (typeof recipe.servings !== 'number') {
+    errors.push('Servings must be a number');
+  } else if (recipe.servings < 1 || recipe.servings > 100) {
+    errors.push('Servings must be between 1 and 100');
+  }
+  
+  // Validate cuisine (optional string)
+  if (recipe.cuisine !== undefined && recipe.cuisine !== null) {
+    if (typeof recipe.cuisine !== 'string') {
+      errors.push('Cuisine must be a string');
+    } else if (recipe.cuisine.length > 50) {
+      errors.push('Cuisine exceeds 50 characters');
+    }
+  }
+  
+  // Validate difficulty (optional string)
+  if (recipe.difficulty !== undefined && recipe.difficulty !== null) {
+    if (typeof recipe.difficulty !== 'string') {
+      errors.push('Difficulty must be a string');
+    } else if (!['Easy', 'Medium', 'Hard'].includes(recipe.difficulty)) {
+      errors.push('Difficulty must be Easy, Medium, or Hard');
+    }
+  }
+  
+  // Validate calories (optional number)
+  if (recipe.calories !== undefined && recipe.calories !== null) {
+    if (typeof recipe.calories !== 'number') {
+      errors.push('Calories must be a number');
+    } else if (recipe.calories < 0 || recipe.calories > 5000) {
+      errors.push('Calories must be between 0 and 5000');
+    }
+  }
+  
+  // Validate protein (optional string)
+  if (recipe.protein !== undefined && recipe.protein !== null) {
+    if (typeof recipe.protein !== 'string') {
+      errors.push('Protein must be a string');
+    } else if (recipe.protein.length > 50) {
+      errors.push('Protein exceeds 50 characters');
+    }
+  }
+  
+  // Validate carbs (optional string)
+  if (recipe.carbs !== undefined && recipe.carbs !== null) {
+    if (typeof recipe.carbs !== 'string') {
+      errors.push('Carbs must be a string');
+    } else if (recipe.carbs.length > 50) {
+      errors.push('Carbs exceeds 50 characters');
+    }
+  }
+  
+  // Validate fat (optional string)
+  if (recipe.fat !== undefined && recipe.fat !== null) {
+    if (typeof recipe.fat !== 'string') {
+      errors.push('Fat must be a string');
+    } else if (recipe.fat.length > 50) {
+      errors.push('Fat exceeds 50 characters');
+    }
+  }
+  
+  // Validate healthTips (optional array of strings)
+  if (recipe.healthTips !== undefined && recipe.healthTips !== null) {
+    if (!Array.isArray(recipe.healthTips)) {
+      errors.push('Health tips must be an array');
+    } else if (recipe.healthTips.length > 20) {
+      errors.push('Too many health tips (max 20)');
+    } else {
+      recipe.healthTips.forEach((tip: any, idx: number) => {
+        if (typeof tip !== 'string' || tip.trim().length === 0) {
+          errors.push(`Health tip ${idx + 1} is invalid or empty`);
+        } else if (tip.length > 200) {
+          errors.push(`Health tip ${idx + 1} exceeds 200 characters`);
+        }
+      });
+    }
+  }
+  
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+  
+  // Build cleaned recipe object
+  const cleanedRecipe: ValidatedRecipe = {
+    title: recipe.title.trim(),
+    ingredients: recipe.ingredients.map((ing: string) => ing.trim()).filter((ing: string) => ing.length > 0),
+    instructions: recipe.instructions.map((inst: string) => inst.trim()).filter((inst: string) => inst.length > 0),
+    prepTime: recipe.prepTime.trim(),
+    servings: Math.round(recipe.servings),
+    cuisine: recipe.cuisine ? recipe.cuisine.trim() : undefined,
+  };
+  
+  // Add optional fields if they exist and are valid
+  if (recipe.description && typeof recipe.description === 'string' && recipe.description.trim()) {
+    cleanedRecipe.description = recipe.description.trim();
+  }
+  if (recipe.cookingTime && typeof recipe.cookingTime === 'string' && recipe.cookingTime.trim()) {
+    cleanedRecipe.cookingTime = recipe.cookingTime.trim();
+  }
+  if (recipe.difficulty) {
+    cleanedRecipe.difficulty = recipe.difficulty;
+  }
+  if (typeof recipe.calories === 'number' && recipe.calories > 0) {
+    cleanedRecipe.calories = Math.round(recipe.calories);
+  }
+  if (recipe.protein) {
+    cleanedRecipe.protein = recipe.protein;
+  }
+  if (recipe.carbs) {
+    cleanedRecipe.carbs = recipe.carbs;
+  }
+  if (recipe.fat) {
+    cleanedRecipe.fat = recipe.fat;
+  }
+  if (Array.isArray(recipe.healthTips) && recipe.healthTips.length > 0) {
+    cleanedRecipe.healthTips = recipe.healthTips
+      .map((tip: string) => tip.trim())
+      .filter((tip: string) => tip.length > 0);
+  }
+  
+  return { valid: true, recipe: cleanedRecipe, errors: [] };
+};
+
 export async function POST(request: NextRequest) {
   try {
     let body;
@@ -226,22 +439,50 @@ IMPORTANT REMINDERS:
           continue;
         }
 
-        // Validate each recipe has at least a title
-        const validRecipes = responseData.recipes.filter((recipe: any) => {
-          return recipe && 
-                 typeof recipe === 'object' &&
-                 recipe.title && 
-                 typeof recipe.title === 'string' &&
-                 recipe.title.trim().length > 0;
-        });
-
-        if (validRecipes.length === 0) {
-          lastError = new Error('No valid recipes in response');
+        if (responseData.recipes.length > 5) {
+          lastError = new Error(`Generated ${responseData.recipes.length} recipes, but maximum is 5`);
           continue;
         }
 
-        // Return valid recipes (can be 1-3)
-        return NextResponse.json({ recipes: validRecipes });
+        // Validate and clean each recipe using strict validation
+        const validRecipes: ValidatedRecipe[] = [];
+        const validationErrors: { [key: number]: string[] } = {};
+        
+        responseData.recipes.forEach((recipe: any, index: number) => {
+          const validation = validateAndCleanRecipeResponse(recipe);
+          
+          if (!validation.valid) {
+            validationErrors[index] = validation.errors;
+            console.warn(`Recipe ${index + 1} validation failed:`, validation.errors.join('; '));
+          } else if (validation.recipe) {
+            validRecipes.push(validation.recipe);
+          }
+        });
+
+        if (validRecipes.length === 0) {
+          const errorMessages = Object.entries(validationErrors)
+            .map(([idx, errors]) => `Recipe ${parseInt(idx) + 1}: ${errors[0]}`)
+            .join('; ');
+          lastError = new Error(`All recipes failed validation: ${errorMessages}`);
+          console.warn('All recipes failed validation:', validationErrors);
+          continue;
+        }
+
+        // Log validation summary
+        const failedCount = responseData.recipes.length - validRecipes.length;
+        if (failedCount > 0) {
+          console.warn(`Generated ${validRecipes.length} valid recipe(s) out of ${responseData.recipes.length}`);
+        }
+
+        // Return validated and cleaned recipes
+        return NextResponse.json({ 
+          recipes: validRecipes,
+          validationInfo: {
+            totalProcessed: responseData.recipes.length,
+            validRecipes: validRecipes.length,
+            failedValidations: failedCount
+          }
+        });
         
       } catch (error) {
         const errorMessage = getErrorMessage(error);
