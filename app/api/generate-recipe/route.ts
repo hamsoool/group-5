@@ -80,46 +80,67 @@ export async function POST(request: NextRequest) {
       .map((i: any) => `${i.quantity} ${i.unit} ${i.name}`)
       .join(', ');
 
-    // Build customization instructions
+    // Build customization instructions with more detail
     let customizationText = '';
+    const customizationDetails: string[] = [];
+    
     if (customization) {
-      const prefs = [];
-      if (customization.vegetarian) prefs.push('vegetarian (no meat or fish)');
-      if (customization.lowSalt) prefs.push('low sodium (use minimal salt and salty ingredients)');
-      if (customization.budgetFriendly) prefs.push('budget-friendly (use affordable, common ingredients)');
+      if (customization.dishType) customizationDetails.push(`Dish Type: ${customization.dishType}`);
+      if (customization.diet === 'Vegetarian') customizationDetails.push('Dietary Requirement: Vegetarian (no meat or fish)');
+      if (customization.diet === 'Vegan') customizationDetails.push('Dietary Requirement: Vegan (no animal products)');
+      if (customization.diet === 'Pescatarian') customizationDetails.push('Dietary Requirement: Pescatarian (no meat, fish/seafood allowed)');
+      if (customization.diet === 'Keto') customizationDetails.push('Dietary Requirement: Keto (low-carb, high-fat)');
+      if (customization.maxPrepTime) customizationDetails.push(`Time Constraint: Complete recipe in under ${customization.maxPrepTime} minutes total`);
+      if (customization.budgetFriendly) customizationDetails.push('Cost Priority: Budget-friendly, use affordable and common ingredients');
+      if (customization.healthFocused) customizationDetails.push('Health Priority: Nutritious, balanced, with health benefits emphasized');
       
-      if (prefs.length > 0) {
-        customizationText = `\n\nCUSTOMIZATION REQUIREMENTS: Make these recipes ${prefs.join(', ')}.`;
+      if (customizationDetails.length > 0) {
+        customizationText = `\n\nCUSTOMIZATION REQUIREMENTS:\n${customizationDetails.join('\n')}`;
       }
     }
 
-    const prompt = `Generate 3 common, traditional FILIPINO recipes using these ingredients: ${ingredientList}${customizationText}
+    const prompt = `You are a Filipino cooking expert creating authentic, traditional Filipino recipes. Your task is to generate 3 GENUINE Filipino recipes that Filipino families actually cook and eat regularly.
 
-IMPORTANT RULES:
-1. Only suggest REAL, WELL-KNOWN Filipino dishes that people commonly cook at home
-2. Match the ingredients to POPULAR Filipino recipes (e.g., ground pork + tomato sauce = Filipino Spaghetti, ham + cream = Carbonara, chicken + soy sauce = Chicken Adobo)
-3. DO NOT create unusual, experimental, or creative fusion recipes
-4. Use simple, practical cooking methods that Filipinos actually use
-5. Each recipe should be a dish that Filipino families regularly make
-6. Include nutrition information and health tips for each recipe
+AVAILABLE INGREDIENTS TO USE:
+${ingredientList}
 
-Examples of what to suggest:
-- Filipino Spaghetti (sweet style with hotdog)
-- Carbonara (creamy pasta)
-- Adobo (chicken or pork)
-- Sinigang (sour soup)
-- Menudo (tomato-based stew)
-- Afritada (tomato-based with vegetables)
-- Giniling (ground meat with tomato sauce)
-- Pancit Canton/Bihon (stir-fried noodles)
+${customizationText}
 
-Please respond in JSON format with exactly this structure:
+CRITICAL GUIDELINES FOR RECIPE GENERATION:
+1. AUTHENTICITY: Only suggest REAL, well-known Filipino dishes that are commonly cooked in Filipino households
+2. INGREDIENT MATCHING: Create recipes that meaningfully use the provided ingredients - don't force-fit ingredients
+3. NO FUSION/EXPERIMENTAL: Avoid creative fusion or experimental recipes - stick to traditional Filipino cuisine
+4. COOKING METHODS: Use simple, practical cooking techniques that Filipino cooks actually use
+5. CULTURAL RELEVANCE: Each recipe should be a dish Filipinos eat regularly (e.g., Adobo, Sinigang, Pancit, Lumpia, Menudo)
+
+EXCELLENT EXAMPLES OF RECIPES TO SUGGEST:
+- Chicken/Pork Adobo (chicken/pork + soy sauce + vinegar + garlic)
+- Sinigang na Baboy/Manok (pork/chicken + tamarind soup base + vegetables)
+- Pancit Canton/Bihon (egg noodles/rice noodles + meat + vegetables)
+- Filipino Spaghetti (spaghetti + hotdog + tomato sauce + cheese)
+- Menudo (pork/beef + potatoes + tomato sauce + liver spread)
+- Giniling (ground pork/beef + potatoes + carrots + peas + tomato sauce)
+- Lumpia (spring rolls with pork/vegetables)
+- Chicken Afritada (chicken + potatoes + carrots + cheese)
+- Caldereta (beef/chicken + cheese + tomato sauce)
+- Kare-Kare (oxtail/pork + peanut sauce + vegetables)
+
+RESPONSE FORMAT - Return VALID JSON ONLY:
 {
   "recipes": [
     {
-      "title": "Common Filipino Dish Name 1 (e.g., Filipino Spaghetti)",
-      "ingredients": ["ingredient 1", "ingredient 2", "ingredient 3"],
-      "instructions": ["step 1", "step 2", "step 3"],
+      "title": "Authentic Filipino Dish Name",
+      "description": "Brief description of what this dish is and why Filipinos love it",
+      "ingredients": [
+        "Ingredient 1 with quantity and preparation",
+        "Ingredient 2 with quantity and preparation",
+        "Ingredient 3 with quantity and preparation"
+      ],
+      "instructions": [
+        "Step 1: Clear, simple instruction",
+        "Step 2: Clear, simple instruction",
+        "Step 3: Clear, simple instruction"
+      ],
       "prepTime": "X mins",
       "cookingTime": "X mins",
       "servings": number,
@@ -129,46 +150,31 @@ Please respond in JSON format with exactly this structure:
       "protein": "Xg",
       "carbs": "Xg",
       "fat": "Xg",
-      "healthTips": ["health tip 1", "health tip 2", "health tip 3"]
-    },
-    {
-      "title": "Common Filipino Dish Name 2 (e.g., Carbonara)", 
-      "ingredients": ["ingredient 1", "ingredient 2", "ingredient 3"],
-      "instructions": ["step 1", "step 2", "step 3"],
-      "prepTime": "X mins",
-      "cookingTime": "X mins", 
-      "servings": number,
-      "cuisine": "Filipino",
-      "difficulty": "Easy/Medium/Hard",
-      "calories": number,
-      "protein": "Xg",
-      "carbs": "Xg",
-      "fat": "Xg",
-      "healthTips": ["health tip 1", "health tip 2"]
-    },
-    {
-      "title": "Common Filipino Dish Name 3 (e.g., Adobo)",
-      "ingredients": ["ingredient 1", "ingredient 2", "ingredient 3"],
-      "instructions": ["step 1", "step 2", "step 3"],
-      "prepTime": "X mins",
-      "cookingTime": "X mins",
-      "servings": number,
-      "cuisine": "Filipino",
-      "difficulty": "Easy/Medium/Hard",
-      "calories": number,
-      "protein": "Xg",
-      "carbs": "Xg",
-      "fat": "Xg",
-      "healthTips": ["health tip 1", "health tip 2", "health tip 3"]
+      "healthTips": [
+        "Specific health benefit or tip for this recipe",
+        "Nutritional highlight",
+        "Serving suggestion or variation tip"
+      ]
     }
   ]
 }
 
-IMPORTANT: 
-- Make sure the response is valid JSON only, no other text
-- Only suggest REAL, COMMONLY COOKED Filipino dishes that match the ingredients provided
-- Include estimated nutrition info per serving (calories, protein, carbs, fat)
-- Provide 2-3 health tips or nutritional insights for each recipe`;
+QUALITY REQUIREMENTS:
+- Generate exactly 3 recipes
+- Each recipe MUST be a real Filipino dish
+- Instructions should be clear, step-by-step, and practical
+- Include realistic nutrition estimates
+- Health tips should be specific and actionable
+- All ingredients should logically connect to the final dish
+- Respect dietary requirements if specified
+- Estimated prep + cooking time should align with time constraints if specified
+
+IMPORTANT REMINDERS:
+- DO NOT invent new or experimental dishes
+- DO NOT suggest non-Filipino cuisines
+- DO NOT force ingredients that don't belong in the dish
+- ONLY return valid JSON - no markdown, no extra text, no explanations
+- Ensure JSON is properly formatted and parseable`;
 
     // Use your available models in priority order
     const models = [

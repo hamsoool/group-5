@@ -129,6 +129,7 @@ export default function IngredientManager({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [validationError, setValidationError] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
   const quantityInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -406,59 +407,112 @@ export default function IngredientManager({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const addIngredient = () => {
+  const validateIngredientInput = (): { valid: boolean; error?: string } => {
     // Validate ingredient name
-    const trimmedName = newIngredient.name?.trim() || '';
+    const trimmedName = newIngredient.name?.trim() || "";
+
     if (!trimmedName || trimmedName.length === 0) {
-      alert('Please enter an ingredient name');
-      return;
+      return { valid: false, error: "Please enter an ingredient name" };
+    }
+
+    if (trimmedName.length > 100) {
+      return {
+        valid: false,
+        error: "Ingredient name is too long. Please use a shorter name.",
+      };
+    }
+
+    // Check if ingredient name contains only valid characters
+    if (!/^[a-zA-Z0-9\s\-&,'.]*$/.test(trimmedName)) {
+      return {
+        valid: false,
+        error:
+          "Ingredient name contains invalid characters. Please use letters, numbers, and basic punctuation.",
+      };
     }
 
     // Validate quantity
-    if (!newIngredient.quantity || typeof newIngredient.quantity !== 'number') {
-      alert('Please enter a valid quantity');
-      return;
+    if (
+      newIngredient.quantity === null ||
+      newIngredient.quantity === undefined
+    ) {
+      return { valid: false, error: "Please enter a quantity" };
+    }
+
+    if (
+      typeof newIngredient.quantity !== "number" ||
+      isNaN(newIngredient.quantity)
+    ) {
+      return {
+        valid: false,
+        error: "Please enter a valid number for quantity",
+      };
     }
 
     if (newIngredient.quantity <= 0) {
-      alert('Quantity must be greater than 0');
-      return;
+      return { valid: false, error: "Quantity must be greater than 0" };
     }
 
     if (!isFinite(newIngredient.quantity)) {
-      alert('Please enter a valid number for quantity');
-      return;
+      return {
+        valid: false,
+        error: "Please enter a valid number for quantity",
+      };
     }
-
-    // Clamp quantity to reasonable range
-    const validQuantity = Math.max(0.1, Math.min(10000, newIngredient.quantity));
 
     // Validate unit
-    if (!newIngredient.unit || typeof newIngredient.unit !== 'string' || newIngredient.unit.trim().length === 0) {
-      alert('Please select a valid unit');
-      return;
-    }
-
-    // Check if ingredient already exists (case-insensitive)
     if (
-      ingredients.some(
-        (ing) => ing.name && ing.name.toLowerCase() === trimmedName.toLowerCase()
-      )
+      !newIngredient.unit ||
+      typeof newIngredient.unit !== "string" ||
+      newIngredient.unit.trim().length === 0
     ) {
-      alert(`${trimmedName} is already added!`);
-      return;
+      return { valid: false, error: "Please select a valid unit" };
     }
 
-    // Validate ingredient name length
-    if (trimmedName.length > 100) {
-      alert('Ingredient name is too long. Please use a shorter name.');
+    if (!UNITS.includes(newIngredient.unit)) {
+      return {
+        valid: false,
+        error: "Please select a valid unit from the list",
+      };
+    }
+
+    // Check for duplicate (case-insensitive)
+    const isDuplicate = ingredients.some(
+      (ing) => ing.name && ing.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      return {
+        valid: false,
+        error: `"${trimmedName}" is already added. Please add a different ingredient.`,
+      };
+    }
+
+    return { valid: true };
+  };
+
+  const addIngredient = () => {
+    // Validate all inputs
+    const validation = validateIngredientInput();
+    if (!validation.valid) {
+      // Emit custom event for parent component to show toast
+      const event = new CustomEvent("ingredientValidationError", {
+        detail: { message: validation.error },
+      });
+      window.dispatchEvent(event);
       return;
     }
 
     try {
+      const trimmedName = newIngredient.name.trim();
+      const validQuantity = Math.max(
+        0.1,
+        Math.min(10000, newIngredient.quantity)
+      );
       const detectedType = detectIngredientType(trimmedName);
+
       const newIngredientItem: Ingredient = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // More unique ID
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         name: trimmedName,
         quantity: validQuantity,
         unit: newIngredient.unit.trim(),
@@ -467,6 +521,12 @@ export default function IngredientManager({
 
       // Update parent component directly
       onIngredientsChange([...ingredients, newIngredientItem]);
+
+      // Emit success event
+      const successEvent = new CustomEvent("ingredientAdded", {
+        detail: { ingredient: newIngredientItem },
+      });
+      window.dispatchEvent(successEvent);
 
       // Reset form
       setNewIngredient({
@@ -477,15 +537,42 @@ export default function IngredientManager({
       });
       setShowSuggestions(false);
       setSuggestions([]);
+      setSelectedSuggestionIndex(-1);
+
+      // Auto-focus back to input for continuous adding
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
     } catch (error) {
-      console.error('Error adding ingredient:', error);
-      alert('An error occurred while adding the ingredient. Please try again.');
+      console.error("Error adding ingredient:", error);
+      const errorEvent = new CustomEvent("ingredientError", {
+        detail: {
+          message:
+            "An unexpected error occurred while adding the ingredient. Please try again.",
+        },
+      });
+      window.dispatchEvent(errorEvent);
     }
   };
 
   const removeIngredient = (id: string) => {
-    // Update parent component directly
-    onIngredientsChange(ingredients.filter((ing) => ing.id !== id));
+    try {
+      const removedIngredient = ingredients.find((ing) => ing.id === id);
+      // Update parent component directly
+      onIngredientsChange(ingredients.filter((ing) => ing.id !== id));
+
+      // Emit removal event
+      const event = new CustomEvent("ingredientRemoved", {
+        detail: { ingredient: removedIngredient },
+      });
+      window.dispatchEvent(event);
+    } catch (error) {
+      console.error("Error removing ingredient:", error);
+      const errorEvent = new CustomEvent("ingredientError", {
+        detail: { message: "Failed to remove ingredient. Please try again." },
+      });
+      window.dispatchEvent(errorEvent);
+    }
   };
 
   return (
@@ -521,7 +608,10 @@ export default function IngredientManager({
             type="text"
             placeholder="Type ingredient name (e.g., chicken, onion, rice...)"
             value={newIngredient.name}
-            onChange={(e) => handleInputChange(e.target.value)}
+            onChange={(e) => {
+              handleInputChange(e.target.value);
+              setValidationError(""); // Clear error when typing
+            }}
             onKeyDown={handleKeyDown}
             onFocus={() => {
               if (suggestions.length > 0) {
@@ -531,6 +621,18 @@ export default function IngredientManager({
             className="shadow-sm"
             autoComplete="off"
           />
+          {newIngredient.name &&
+            ingredients.some(
+              (ing) =>
+                ing.name.toLowerCase() === newIngredient.name.toLowerCase()
+            ) && (
+              <div
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 text-sm"
+                title="Already added"
+              >
+                ⚠️
+              </div>
+            )}
           {showSuggestions && suggestions.length > 0 && (
             <div
               ref={suggestionsRef}
@@ -574,6 +676,11 @@ export default function IngredientManager({
                 step="0.1"
                 min="0"
               />
+              {newIngredient.quantity < 0 && (
+                <p className="text-xs text-red-500 mt-1">
+                  Quantity must be greater than 0
+                </p>
+              )}
             </div>
             <select
               className="h-9 sm:h-10 w-full sm:w-32 rounded-md border border-input bg-input-background px-2 sm:px-3 py-1 text-xs sm:text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
@@ -639,11 +746,30 @@ export default function IngredientManager({
             </div>
           )}
         </div>
+
+        {/* Validation Feedback */}
+        {newIngredient.name &&
+          ingredients.some(
+            (ing) => ing.name.toLowerCase() === newIngredient.name.toLowerCase()
+          ) && (
+            <div className="px-3 py-2 rounded-md bg-red-50/80 dark:bg-red-950/30 border border-red-100 dark:border-red-900 text-xs text-red-700 dark:text-red-300">
+              This ingredient is already added. Try a different one!
+            </div>
+          )}
+        {newIngredient.name && !newIngredient.quantity && (
+          <div className="px-3 py-2 rounded-md bg-yellow-50/80 dark:bg-yellow-950/30 border border-yellow-100 dark:border-yellow-900 text-xs text-yellow-700 dark:text-yellow-300">
+            Please enter a quantity to continue
+          </div>
+        )}
       </div>
       <Button
         onClick={addIngredient}
-        disabled={!newIngredient.name || !newIngredient.quantity}
-        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all"
+        disabled={
+          !newIngredient.name ||
+          !newIngredient.quantity ||
+          newIngredient.quantity <= 0
+        }
+        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         size="lg"
       >
         <Plus className="w-4 h-4 mr-2" />
