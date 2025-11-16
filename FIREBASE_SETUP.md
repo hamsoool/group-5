@@ -9,8 +9,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /recipes/{recipeId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Allow read if user owns the recipe
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Allow create if user sets their own userId
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      // Allow update/delete if user owns the recipe
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;

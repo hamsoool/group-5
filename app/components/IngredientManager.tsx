@@ -407,29 +407,68 @@ export default function IngredientManager({
   }, []);
 
   const addIngredient = () => {
-    if (newIngredient.name && newIngredient.quantity) {
-      const trimmedName = newIngredient.name.trim();
-      // Check if ingredient already exists
-      if (
-        ingredients.some(
-          (ing) => ing.name.toLowerCase() === trimmedName.toLowerCase()
-        )
-      ) {
-        alert(`${trimmedName} is already added!`);
-        return;
-      }
+    // Validate ingredient name
+    const trimmedName = newIngredient.name?.trim() || '';
+    if (!trimmedName || trimmedName.length === 0) {
+      alert('Please enter an ingredient name');
+      return;
+    }
 
+    // Validate quantity
+    if (!newIngredient.quantity || typeof newIngredient.quantity !== 'number') {
+      alert('Please enter a valid quantity');
+      return;
+    }
+
+    if (newIngredient.quantity <= 0) {
+      alert('Quantity must be greater than 0');
+      return;
+    }
+
+    if (!isFinite(newIngredient.quantity)) {
+      alert('Please enter a valid number for quantity');
+      return;
+    }
+
+    // Clamp quantity to reasonable range
+    const validQuantity = Math.max(0.1, Math.min(10000, newIngredient.quantity));
+
+    // Validate unit
+    if (!newIngredient.unit || typeof newIngredient.unit !== 'string' || newIngredient.unit.trim().length === 0) {
+      alert('Please select a valid unit');
+      return;
+    }
+
+    // Check if ingredient already exists (case-insensitive)
+    if (
+      ingredients.some(
+        (ing) => ing.name && ing.name.toLowerCase() === trimmedName.toLowerCase()
+      )
+    ) {
+      alert(`${trimmedName} is already added!`);
+      return;
+    }
+
+    // Validate ingredient name length
+    if (trimmedName.length > 100) {
+      alert('Ingredient name is too long. Please use a shorter name.');
+      return;
+    }
+
+    try {
       const detectedType = detectIngredientType(trimmedName);
       const newIngredientItem: Ingredient = {
-        id: Date.now().toString(),
-        ...newIngredient,
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // More unique ID
         name: trimmedName,
+        quantity: validQuantity,
+        unit: newIngredient.unit.trim(),
         type: detectedType,
       };
 
       // Update parent component directly
       onIngredientsChange([...ingredients, newIngredientItem]);
 
+      // Reset form
       setNewIngredient({
         name: "",
         quantity: 0,
@@ -438,6 +477,9 @@ export default function IngredientManager({
       });
       setShowSuggestions(false);
       setSuggestions([]);
+    } catch (error) {
+      console.error('Error adding ingredient:', error);
+      alert('An error occurred while adding the ingredient. Please try again.');
     }
   };
 

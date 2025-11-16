@@ -40,11 +40,29 @@ interface RecipeCardProps {
 }
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
-  const instructions = recipe.instructions || recipe.steps || [];
+  // Safe data extraction with fallbacks
+  const instructions = Array.isArray(recipe.instructions) 
+    ? recipe.instructions 
+    : Array.isArray(recipe.steps) 
+    ? recipe.steps 
+    : [];
+  
   const cookTime = recipe.cookTime || recipe.cookingTime || "";
+  const title = recipe.title || "Untitled Recipe";
+  const description = recipe.description || "";
+  const prepTime = recipe.prepTime || "N/A";
+  const servings = recipe.servings || 1;
+  const difficulty = recipe.difficulty || "";
+  
+  // Safely get ingredients array
+  const ingredients = Array.isArray(recipe.ingredients) 
+    ? recipe.ingredients.filter(ing => ing && typeof ing === 'string' && ing.trim().length > 0)
+    : [];
 
   // Get ingredient icon based on ingredient type
   const getIngredientIcon = (ingredient: string) => {
+    if (!ingredient || typeof ingredient !== 'string') return "🥘";
+    
     const lowerIng = ingredient.toLowerCase();
     if (
       lowerIng.includes("meat") ||
@@ -93,203 +111,225 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   };
 
   return (
-    <Card className="overflow-hidden border-none shadow-md dark:bg-card/50">
-      <CardHeader className="bg-gradient-to-br from-orange-50/80 to-amber-50/80 dark:from-orange-950/30 dark:to-amber-950/30 pb-5 sm:pb-6 md:pb-7 pt-5 sm:pt-6 md:pt-7">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+    <Card className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow duration-300 dark:bg-card/50 bg-white">
+      <CardHeader className="bg-gradient-to-br from-orange-50/80 via-amber-50/80 to-orange-100/60 dark:from-orange-950/30 dark:via-amber-950/30 dark:to-orange-900/20 pb-6 sm:pb-7 md:pb-8 pt-6 sm:pt-7 md:pt-8 border-b border-orange-100/50 dark:border-orange-900/30">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-5">
           <div className="flex-1 min-w-0">
-            <CardTitle className="mb-2 sm:mb-2.5 tracking-tight text-xl sm:text-2xl break-words">
-              {recipe.title}
+            <CardTitle className="mb-3 sm:mb-3.5 tracking-tight text-2xl sm:text-3xl font-bold break-words text-gray-900 dark:text-white">
+              {title}
             </CardTitle>
-            {recipe.description && (
-              <CardDescription className="leading-relaxed text-xs sm:text-sm">
-                {recipe.description}
+            {description && (
+              <CardDescription className="leading-relaxed text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-2">
+                {description}
               </CardDescription>
             )}
           </div>
-          {recipe.difficulty && (
+          {difficulty && (
             <Badge
               variant="secondary"
-              className="shrink-0 px-2 sm:px-3 py-1 text-xs sm:text-sm"
+              className="shrink-0 px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-semibold bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200 border border-orange-200 dark:border-orange-800"
             >
-              {recipe.difficulty}
+              {difficulty}
             </Badge>
           )}
         </div>
 
-        <div className="flex flex-wrap gap-3 sm:gap-4 md:gap-5 mt-4 sm:mt-5">
-          <div className="flex items-center gap-2 text-muted-foreground text-xs sm:text-sm">
-            <Clock className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
-            <span className="line-clamp-1">Prep: {recipe.prepTime}</span>
+        <div className="flex flex-wrap gap-4 sm:gap-5 md:gap-6 mt-5 sm:mt-6">
+          <div className="flex items-center gap-2.5 text-gray-700 dark:text-gray-300 text-sm sm:text-base font-medium">
+            <Clock className="w-5 h-5 flex-shrink-0 text-orange-600 dark:text-orange-400" strokeWidth={2.5} />
+            <span className="line-clamp-1">Prep: {prepTime}</span>
           </div>
           {cookTime && (
-            <div className="flex items-center gap-2 text-muted-foreground text-xs sm:text-sm">
-              <ChefHat className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
+            <div className="flex items-center gap-2.5 text-gray-700 dark:text-gray-300 text-sm sm:text-base font-medium">
+              <ChefHat className="w-5 h-5 flex-shrink-0 text-orange-600 dark:text-orange-400" strokeWidth={2.5} />
               <span className="line-clamp-1">Cook: {cookTime}</span>
             </div>
           )}
-          <div className="flex items-center gap-2 text-muted-foreground text-xs sm:text-sm">
-            <Users className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
-            <span className="line-clamp-1">{recipe.servings} servings</span>
+          <div className="flex items-center gap-2.5 text-gray-700 dark:text-gray-300 text-sm sm:text-base font-medium">
+            <Users className="w-5 h-5 flex-shrink-0 text-orange-600 dark:text-orange-400" strokeWidth={2.5} />
+            <span className="line-clamp-1">{servings} {servings === 1 ? 'serving' : 'servings'}</span>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-5 sm:pt-6 md:pt-7 pb-5 sm:pb-6 md:pb-7 space-y-5 sm:space-y-6 md:space-y-7">
-        <div>
-          <h3 className="mb-3 sm:mb-4 tracking-tight font-semibold text-sm sm:text-base flex items-center gap-2">
-            <Leaf
-              className="w-4 h-4 text-green-600 dark:text-green-400"
-              strokeWidth={2}
-            />
-            Ingredients
-          </h3>
-          <ul className="space-y-2 sm:space-y-2.5">
-            {recipe.ingredients.map((ingredient, index) => (
-              <li
-                key={index}
-                className="flex items-start gap-2 sm:gap-3 text-xs sm:text-sm"
-              >
-                <span className="text-lg sm:text-xl mt-0.5 flex-shrink-0">
-                  {getIngredientIcon(ingredient)}
-                </span>
-                <span className="leading-relaxed">{ingredient}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <CardContent className="pt-6 sm:pt-7 md:pt-8 pb-6 sm:pb-7 md:pb-8 space-y-6 sm:space-y-7 md:space-y-8">
+        {ingredients.length > 0 ? (
+          <div>
+            <h3 className="mb-4 sm:mb-5 tracking-tight font-bold text-base sm:text-lg flex items-center gap-2.5 text-gray-900 dark:text-white">
+              <Leaf
+                className="w-5 h-5 text-green-600 dark:text-green-400"
+                strokeWidth={2.5}
+              />
+              Ingredients
+            </h3>
+            <ul className="space-y-3 sm:space-y-3.5">
+              {ingredients.map((ingredient, index) => (
+                <li
+                  key={index}
+                  className="flex items-start gap-3 sm:gap-4 text-sm sm:text-base bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg border border-gray-100 dark:border-gray-800"
+                >
+                  <span className="text-xl sm:text-2xl mt-0.5 flex-shrink-0">
+                    {getIngredientIcon(ingredient)}
+                  </span>
+                  <span className="leading-relaxed text-gray-700 dark:text-gray-300 flex-1">{ingredient}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">No ingredients listed for this recipe.</p>
+          </div>
+        )}
 
-        {instructions.length > 0 && (
+        {instructions.length > 0 ? (
           <>
             <Separator className="my-2" />
             <div>
-              <h3 className="mb-3 sm:mb-4 tracking-tight font-semibold text-sm sm:text-base flex items-center gap-2">
+              <h3 className="mb-4 sm:mb-5 tracking-tight font-bold text-base sm:text-lg flex items-center gap-2.5 text-gray-900 dark:text-white">
                 <Flame
-                  className="w-4 h-4 text-orange-600 dark:text-orange-400"
-                  strokeWidth={2}
+                  className="w-5 h-5 text-orange-600 dark:text-orange-400"
+                  strokeWidth={2.5}
                 />
                 Instructions
               </h3>
-              <ol className="space-y-3 sm:space-y-4">
-                {instructions.map((step, index) => (
-                  <li
-                    key={index}
-                    className="flex gap-2 sm:gap-4 text-xs sm:text-sm"
-                  >
-                    <span className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-orange-500 text-white text-xs sm:text-sm shrink-0 shadow-sm font-semibold">
-                      {index + 1}
-                    </span>
-                    <span className="flex-1 pt-0.5 sm:pt-1 leading-relaxed">
-                      {step}
-                    </span>
-                  </li>
-                ))}
+              <ol className="space-y-4 sm:space-y-5">
+                {instructions.map((step, index) => {
+                  const stepText = typeof step === 'string' ? step : String(step || '');
+                  if (!stepText.trim()) return null;
+                  
+                  return (
+                    <li
+                      key={index}
+                      className="flex gap-3 sm:gap-4 text-sm sm:text-base"
+                    >
+                      <span className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white text-sm sm:text-base shrink-0 shadow-md font-bold">
+                        {index + 1}
+                      </span>
+                      <span className="flex-1 pt-1 sm:pt-1.5 leading-relaxed text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                        {stepText}
+                      </span>
+                    </li>
+                  );
+                })}
               </ol>
             </div>
           </>
+        ) : (
+          <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">No instructions available for this recipe.</p>
+          </div>
         )}
 
-        {recipe.variations && recipe.variations.length > 0 && (
+        {recipe.variations && Array.isArray(recipe.variations) && recipe.variations.length > 0 && (
           <>
             <Separator className="my-2" />
             <div>
-              <h3 className="mb-3 sm:mb-4 tracking-tight font-semibold text-sm sm:text-base flex items-center gap-2">
+              <h3 className="mb-4 sm:mb-5 tracking-tight font-bold text-base sm:text-lg flex items-center gap-2.5 text-gray-900 dark:text-white">
                 <Lightbulb
-                  className="w-4 h-4 text-amber-600 dark:text-amber-400"
-                  strokeWidth={2}
+                  className="w-5 h-5 text-amber-600 dark:text-amber-400"
+                  strokeWidth={2.5}
                 />
                 Variations & Alternatives
               </h3>
-              <div className="space-y-2 sm:space-y-3">
-                {recipe.variations.map((variation, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 text-xs sm:text-sm"
-                  >
-                    <span className="text-lg sm:text-xl mt-0.5 flex-shrink-0">
-                      💡
-                    </span>
-                    <span className="leading-relaxed">{variation}</span>
-                  </div>
-                ))}
+              <div className="space-y-3 sm:space-y-4">
+                {recipe.variations
+                  .filter(v => v && typeof v === 'string' && v.trim().length > 0)
+                  .map((variation, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-sm sm:text-base"
+                    >
+                      <span className="text-2xl mt-0.5 flex-shrink-0">
+                        💡
+                      </span>
+                      <span className="leading-relaxed text-amber-900 dark:text-amber-200">{variation}</span>
+                    </div>
+                  ))}
               </div>
             </div>
           </>
         )}
 
-        {(recipe.nutritionTips || recipe.healthTips) && (
+        {(recipe.nutritionTips || (recipe.healthTips && Array.isArray(recipe.healthTips) && recipe.healthTips.length > 0)) && (
           <>
             <Separator className="my-2" />
-            <div className="p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl bg-green-50/80 dark:bg-green-950/30 border border-green-100 dark:border-green-900 text-xs sm:text-sm">
-              <h3 className="mb-2 sm:mb-2.5 text-green-900 dark:text-green-400 tracking-tight font-semibold flex items-center gap-2">
-                <Leaf className="w-4 h-4" strokeWidth={2} />
-                {recipe.healthTips ? "Health Tips" : "Nutrition Tip"}
+            <div className="p-4 sm:p-5 md:p-6 rounded-xl bg-green-50/80 dark:bg-green-950/30 border border-green-200 dark:border-green-900 text-sm sm:text-base">
+              <h3 className="mb-3 sm:mb-4 text-green-900 dark:text-green-400 tracking-tight font-bold text-base sm:text-lg flex items-center gap-2.5">
+                <Leaf className="w-5 h-5" strokeWidth={2.5} />
+                {recipe.healthTips && Array.isArray(recipe.healthTips) && recipe.healthTips.length > 0 ? "Health Tips" : "Nutrition Tip"}
               </h3>
-              {recipe.nutritionTips && (
-                <p className="text-green-800 dark:text-green-300 leading-relaxed">
+              {recipe.nutritionTips && typeof recipe.nutritionTips === 'string' && (
+                <p className="text-green-800 dark:text-green-300 leading-relaxed mb-3">
                   {recipe.nutritionTips}
                 </p>
               )}
-              {recipe.healthTips && recipe.healthTips.length > 0 && (
-                <ul className="space-y-1 sm:space-y-1.5 mt-2">
-                  {recipe.healthTips.map((tip, index) => (
-                    <li
-                      key={index}
-                      className="text-green-800 dark:text-green-300 leading-relaxed"
-                    >
-                      • {tip}
-                    </li>
-                  ))}
+              {recipe.healthTips && Array.isArray(recipe.healthTips) && recipe.healthTips.length > 0 && (
+                <ul className="space-y-2 sm:space-y-2.5 mt-3">
+                  {recipe.healthTips
+                    .filter(tip => tip && typeof tip === 'string' && tip.trim().length > 0)
+                    .map((tip, index) => (
+                      <li
+                        key={index}
+                        className="text-green-800 dark:text-green-300 leading-relaxed flex items-start gap-2"
+                      >
+                        <span className="text-green-600 dark:text-green-400 mt-1">•</span>
+                        <span>{tip}</span>
+                      </li>
+                    ))}
                 </ul>
               )}
             </div>
           </>
         )}
 
-        {recipe.calories && (
+        {(recipe.calories || recipe.protein || recipe.carbs || recipe.fat) && (
           <>
             <Separator className="my-2" />
-            <div className="p-3 sm:p-4 md:p-5 rounded-lg sm:rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 text-xs sm:text-sm">
-              <h3 className="mb-2 sm:mb-2.5 text-blue-900 dark:text-blue-400 tracking-tight font-semibold flex items-center gap-2">
-                <Droplet className="w-4 h-4" strokeWidth={2} />
+            <div className="p-4 sm:p-5 md:p-6 rounded-xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 text-sm sm:text-base">
+              <h3 className="mb-4 sm:mb-5 text-blue-900 dark:text-blue-400 tracking-tight font-bold text-base sm:text-lg flex items-center gap-2.5">
+                <Droplet className="w-5 h-5" strokeWidth={2.5} />
                 Nutrition (per serving)
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-xs sm:text-sm">
-                <div>
-                  <span className="font-medium text-blue-700 dark:text-blue-300">
-                    Calories:
-                  </span>{" "}
-                  <span className="text-blue-600 dark:text-blue-400 block sm:inline">
-                    {recipe.calories} kcal
-                  </span>
-                </div>
-                {recipe.protein && (
-                  <div>
-                    <span className="font-medium text-blue-700 dark:text-blue-300">
-                      Protein:
-                    </span>{" "}
-                    <span className="text-blue-600 dark:text-blue-400 block sm:inline">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                {recipe.calories && (
+                  <div className="bg-white dark:bg-gray-900/50 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
+                    <div className="font-semibold text-blue-700 dark:text-blue-300 text-xs mb-1">
+                      Calories
+                    </div>
+                    <div className="text-blue-600 dark:text-blue-400 font-bold text-base">
+                      {typeof recipe.calories === 'number' ? `${recipe.calories} kcal` : recipe.calories}
+                    </div>
+                  </div>
+                )}
+                {recipe.protein && typeof recipe.protein === 'string' && (
+                  <div className="bg-white dark:bg-gray-900/50 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
+                    <div className="font-semibold text-blue-700 dark:text-blue-300 text-xs mb-1">
+                      Protein
+                    </div>
+                    <div className="text-blue-600 dark:text-blue-400 font-bold text-base">
                       {recipe.protein}
-                    </span>
+                    </div>
                   </div>
                 )}
-                {recipe.carbs && (
-                  <div>
-                    <span className="font-medium text-blue-700 dark:text-blue-300">
-                      Carbs:
-                    </span>{" "}
-                    <span className="text-blue-600 dark:text-blue-400 block sm:inline">
+                {recipe.carbs && typeof recipe.carbs === 'string' && (
+                  <div className="bg-white dark:bg-gray-900/50 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
+                    <div className="font-semibold text-blue-700 dark:text-blue-300 text-xs mb-1">
+                      Carbs
+                    </div>
+                    <div className="text-blue-600 dark:text-blue-400 font-bold text-base">
                       {recipe.carbs}
-                    </span>
+                    </div>
                   </div>
                 )}
-                {recipe.fat && (
-                  <div>
-                    <span className="font-medium text-blue-700 dark:text-blue-300">
-                      Fat:
-                    </span>{" "}
-                    <span className="text-blue-600 dark:text-blue-400">
+                {recipe.fat && typeof recipe.fat === 'string' && (
+                  <div className="bg-white dark:bg-gray-900/50 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
+                    <div className="font-semibold text-blue-700 dark:text-blue-300 text-xs mb-1">
+                      Fat
+                    </div>
+                    <div className="text-blue-600 dark:text-blue-400 font-bold text-base">
                       {recipe.fat}
-                    </span>
+                    </div>
                   </div>
                 )}
               </div>

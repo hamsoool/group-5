@@ -9,9 +9,11 @@ import { db, auth } from '@/lib/firebase';
 import { Header } from '@/app/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
-import { Sparkles, Lightbulb, Leaf, LogOut, Trash2, Home, List, BookOpen, Wand2, Heart, User } from 'lucide-react';
+import { Sparkles, Lightbulb, Leaf, LogOut, Trash2, Home, List, BookOpen, Wand2, Heart, User, CheckCircle2 } from 'lucide-react';
 import IngredientManager from '@/app/components/IngredientManager';
 import { RecipeCard } from '@/app/components/RecipeCard';
+import { useToast } from '@/app/components/ui/use-toast';
+import { ToastContainer } from '@/app/components/ui/toast';
 
 interface Ingredient {
   id: string;
@@ -182,6 +184,9 @@ export default function DashboardPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [userProfile, setUserProfile] = useState<{ firstName?: string; lastName?: string } | null>(null);
   const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
+  const [savedRecipeIds, setSavedRecipeIds] = useState<Set<string>>(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; recipeId: string | null }>({ show: false, recipeId: null });
+  const { toasts, success, error, warning, info, removeToast } = useToast();
   const router = useRouter();
 
   // Filter states
@@ -223,11 +228,46 @@ export default function DashboardPage() {
       const recipesCollection = collection(db, 'recipes');
       const q = query(recipesCollection, where('userId', '==', userId));
       const recipesSnapshot = await getDocs(q);
-      const recipesList = recipesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Recipe));
+      const recipesList = recipesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        const recipe: Recipe & { createdAt?: string } = {
+          id: doc.id,
+          title: data.title || 'Untitled Recipe',
+          ingredients: Array.isArray(data.ingredients) ? data.ingredients : [],
+          instructions: Array.isArray(data.instructions) ? data.instructions : [],
+          prepTime: data.prepTime || 'N/A',
+          cookingTime: data.cookingTime || undefined,
+          servings: typeof data.servings === 'number' && data.servings > 0 ? data.servings : 1,
+          cuisine: data.cuisine || 'Filipino',
+          difficulty: data.difficulty || undefined,
+          calories: typeof data.calories === 'number' ? data.calories : undefined,
+          protein: data.protein || undefined,
+          carbs: data.carbs || undefined,
+          fat: data.fat || undefined,
+          healthTips: Array.isArray(data.healthTips) ? data.healthTips : undefined,
+          description: data.description || undefined,
+        };
+        // Preserve createdAt for sorting
+        if (data.createdAt) {
+          (recipe as any).createdAt = data.createdAt;
+        }
+        return recipe;
+      });
+      
+      // Sort by creation date (newest first)
+      recipesList.sort((a, b) => {
+        const aDate = (a as any).createdAt || '';
+        const bDate = (b as any).createdAt || '';
+        return bDate.localeCompare(aDate);
+      });
+      
       setSavedRecipes(recipesList);
+      
+      // Update saved recipe IDs set for duplicate checking
+      const savedTitles = new Set<string>(
+        recipesList.map(r => r.title?.toLowerCase().trim()).filter((title): title is string => Boolean(title))
+      );
+      setSavedRecipeIds(savedTitles);
     } catch (error) {
       console.error('Error loading recipes:', error);
     } finally {
@@ -288,40 +328,91 @@ export default function DashboardPage() {
     }
   };
 
+  // Helper function to check if recipe is already saved
+  const isRecipeSaved = (recipeTitle: string): boolean => {
+    const normalizedTitle = recipeTitle?.toLowerCase().trim() || '';
+    if (!normalizedTitle) return false;
+    return savedRecipeIds.has(normalizedTitle);
+  };
+
   const handleSaveRecipe = async (recipe: Omit<Recipe, 'id'> & { id?: string }) => {
-    if (!user) return;
+    if (!user) {
+      error('You must be logged in to save recipes');
+      return;
+    }
+
+    // Check if recipe already exists (by title)
+    const recipeTitle = recipe.title?.trim() || '';
+    if (!recipeTitle) {
+      error('Recipe title is required');
+      return;
+    }
+
+    // Check for duplicate by title (case-insensitive)
+    if (isRecipeSaved(recipeTitle)) {
+      warning('This recipe is already saved!');
+      return;
+    }
 
     try {
-      const recipesCollection = collection(db, 'recipes');
-      const docRef = await addDoc(recipesCollection, {
+      // Prepare recipe data with all required fields
+      const recipeData: any = {
         userId: user.uid,
-        title: recipe.title,
-        ingredients: recipe.ingredients,
-        instructions: recipe.instructions,
-        prepTime: recipe.prepTime,
-        cookingTime: recipe.cookingTime,
-        servings: recipe.servings,
+        title: recipeTitle,
+        ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
+        instructions: Array.isArray(recipe.instructions) ? recipe.instructions : [],
+        prepTime: recipe.prepTime || 'N/A',
+        servings: typeof recipe.servings === 'number' && recipe.servings > 0 ? recipe.servings : 1,
         cuisine: recipe.cuisine || 'Filipino',
-        difficulty: recipe.difficulty,
-        calories: recipe.calories,
-        protein: recipe.protein,
-        carbs: recipe.carbs,
-        fat: recipe.fat,
-        healthTips: recipe.healthTips,
-        description: recipe.description,
         createdAt: new Date().toISOString()
-      });
+      };
+
+      // Add optional fields only if they exist
+      if (recipe.cookingTime) recipeData.cookingTime = recipe.cookingTime;
+      if (recipe.difficulty) recipeData.difficulty = recipe.difficulty;
+      if (typeof recipe.calories === 'number' && recipe.calories > 0) recipeData.calories = recipe.calories;
+      if (recipe.protein) recipeData.protein = recipe.protein;
+      if (recipe.carbs) recipeData.carbs = recipe.carbs;
+      if (recipe.fat) recipeData.fat = recipe.fat;
+      if (Array.isArray(recipe.healthTips) && recipe.healthTips.length > 0) recipeData.healthTips = recipe.healthTips;
+      if (recipe.description) recipeData.description = recipe.description;
+
+      console.log('Saving recipe with data:', recipeData);
+      console.log('User UID:', user.uid);
+
+      const recipesCollection = collection(db, 'recipes');
+      const docRef = await addDoc(recipesCollection, recipeData);
       
-      const newRecipe = {
-        id: docRef.id,
-        ...recipe
-      } as Recipe;
+      console.log('Recipe saved with ID:', docRef.id);
       
-      setSavedRecipes([...savedRecipes, newRecipe]);
-      alert('Recipe saved successfully!');
-    } catch (error) {
+      // Update saved recipe IDs immediately
+      const normalizedTitle = recipeTitle.toLowerCase().trim();
+      setSavedRecipeIds(prev => new Set([...prev, normalizedTitle]));
+      
+      // Reload recipes from Firestore to ensure consistency
+      await loadRecipes(user.uid);
+      
+      success('Recipe saved successfully!', 3000);
+      
+      // Switch to Recipes tab to show the saved recipe
+      setActiveTab('recipes');
+    } catch (error: any) {
       console.error('Error saving recipe:', error);
-      alert('Failed to save recipe. Please try again.');
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to save recipe. Please try again.';
+      
+      if (error?.code === 'permission-denied') {
+        errorMessage = 'Permission denied. Please check your Firestore security rules.';
+      } else if (error?.code === 'unavailable') {
+        errorMessage = 'Firestore service is temporarily unavailable. Please try again later.';
+      } else if (error?.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
+      error(errorMessage, 5000);
     }
   };
 
@@ -334,20 +425,82 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteRecipe = async (id: string) => {
-    if (!id) return;
+  const handleDeleteClick = (id: string) => {
+    setDeleteConfirm({ show: true, recipeId: id });
+  };
+
+  const handleDeleteConfirm = async () => {
+    const id = deleteConfirm.recipeId;
+    if (!id || !user) {
+      setDeleteConfirm({ show: false, recipeId: null });
+      return;
+    }
+    
+    // Find the recipe to get its title for updating savedRecipeIds
+    const recipeToDelete = savedRecipes.find(r => r.id === id);
+    
     try {
       await deleteDoc(doc(db, 'recipes', id));
-      setSavedRecipes(savedRecipes.filter(r => r.id !== id));
-    } catch (error) {
-      console.error('Error deleting recipe:', error);
-      alert('Failed to delete recipe. Please try again.');
+      
+      // Update saved recipe IDs immediately
+      if (recipeToDelete?.title) {
+        const normalizedTitle = recipeToDelete.title.toLowerCase().trim();
+        setSavedRecipeIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(normalizedTitle);
+          return newSet;
+        });
+      }
+      
+      // Reload recipes from Firestore to ensure consistency
+      await loadRecipes(user.uid);
+      
+      success('Recipe deleted successfully!', 3000);
+    } catch (err) {
+      console.error('Error deleting recipe:', err);
+      error('Failed to delete recipe. Please try again.', 5000);
+    } finally {
+      setDeleteConfirm({ show: false, recipeId: null });
     }
   };
 
+  const handleDeleteCancel = () => {
+    setDeleteConfirm({ show: false, recipeId: null });
+  };
+
+  // Validate and sanitize ingredients before sending to API
+  const validateAndSanitizeIngredients = (ingredientsToValidate: Ingredient[]): Ingredient[] => {
+    return ingredientsToValidate
+      .filter(ing => {
+        // Remove ingredients with missing or invalid data
+        if (!ing || typeof ing !== 'object') return false;
+        if (!ing.id || typeof ing.id !== 'string') return false;
+        if (!ing.name || typeof ing.name !== 'string' || ing.name.trim().length === 0) return false;
+        if (typeof ing.quantity !== 'number' || ing.quantity <= 0 || !isFinite(ing.quantity)) return false;
+        if (!ing.unit || typeof ing.unit !== 'string' || ing.unit.trim().length === 0) return false;
+        if (!ing.type || !['meat', 'vegetable', 'fish', 'other'].includes(ing.type)) return false;
+        return true;
+      })
+      .map(ing => ({
+        ...ing,
+        name: ing.name.trim(),
+        unit: ing.unit.trim(),
+        quantity: Math.max(0.1, Math.min(10000, ing.quantity)) // Clamp quantity to reasonable range
+      }));
+  };
+
   const handleGenerateRecipe = async () => {
-    if (ingredients.length < 3) {
-      alert('Please add at least 3 main ingredients to generate recipes');
+    // Validate minimum ingredients
+    if (!ingredients || ingredients.length < 3) {
+      warning('Please add at least 3 main ingredients to generate recipes');
+      return;
+    }
+
+    // Validate and sanitize ingredients
+    const validIngredients = validateAndSanitizeIngredients(ingredients);
+    
+    if (validIngredients.length < 3) {
+      warning('Please ensure all ingredients have valid names, quantities, and units. At least 3 valid ingredients are required.');
       return;
     }
 
@@ -365,27 +518,84 @@ export default function DashboardPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          ingredients,
+          ingredients: validIngredients,
           customization 
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
         throw new Error(errorData.error || `API error: ${response.status}`);
       }
 
       const data = await response.json();
       
-      if (!data || !data.recipes || !Array.isArray(data.recipes) || data.recipes.length === 0) {
-        throw new Error('Invalid recipe format received');
+      // Validate response structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response format from server');
       }
       
-      setGeneratedRecipes(data.recipes);
-      setActiveTab('recipes');
+      if (!data.recipes || !Array.isArray(data.recipes)) {
+        throw new Error('Invalid recipe format received - recipes array missing');
+      }
+      
+      if (data.recipes.length === 0) {
+        throw new Error('No recipes were generated. Please try again with different ingredients.');
+      }
+
+      // Sanitize and validate each recipe
+      const sanitizedRecipes = data.recipes
+        .filter((recipe: any) => {
+          // Basic validation - recipe must have title and at least some ingredients/instructions
+          return recipe && 
+                 typeof recipe === 'object' &&
+                 recipe.title && 
+                 typeof recipe.title === 'string' &&
+                 recipe.title.trim().length > 0;
+        })
+        .map((recipe: any) => {
+          // Ensure all required fields have safe defaults
+          return {
+            title: (recipe.title || 'Untitled Recipe').trim(),
+            description: recipe.description && typeof recipe.description === 'string' ? recipe.description.trim() : undefined,
+            ingredients: Array.isArray(recipe.ingredients) 
+              ? recipe.ingredients.filter((ing: any) => ing && typeof ing === 'string' && ing.trim().length > 0).map((ing: string) => ing.trim())
+              : [],
+            instructions: Array.isArray(recipe.instructions) 
+              ? recipe.instructions.filter((inst: any) => inst && typeof inst === 'string' && inst.trim().length > 0).map((inst: string) => inst.trim())
+              : [],
+            prepTime: recipe.prepTime && typeof recipe.prepTime === 'string' ? recipe.prepTime.trim() : 'N/A',
+            cookingTime: recipe.cookingTime && typeof recipe.cookingTime === 'string' ? recipe.cookingTime.trim() : undefined,
+            servings: typeof recipe.servings === 'number' && recipe.servings > 0 ? recipe.servings : 1,
+            difficulty: recipe.difficulty && typeof recipe.difficulty === 'string' ? recipe.difficulty.trim() : undefined,
+            calories: typeof recipe.calories === 'number' && recipe.calories > 0 ? recipe.calories : undefined,
+            protein: recipe.protein && typeof recipe.protein === 'string' ? recipe.protein.trim() : undefined,
+            carbs: recipe.carbs && typeof recipe.carbs === 'string' ? recipe.carbs.trim() : undefined,
+            fat: recipe.fat && typeof recipe.fat === 'string' ? recipe.fat.trim() : undefined,
+            healthTips: Array.isArray(recipe.healthTips) 
+              ? recipe.healthTips.filter((tip: any) => tip && typeof tip === 'string' && tip.trim().length > 0).map((tip: string) => tip.trim())
+              : undefined,
+            cuisine: recipe.cuisine && typeof recipe.cuisine === 'string' ? recipe.cuisine.trim() : undefined,
+          };
+        });
+
+      if (sanitizedRecipes.length === 0) {
+        throw new Error('No valid recipes were generated. Please try again.');
+      }
+      
+      setGeneratedRecipes(sanitizedRecipes);
+      success('Recipes generated successfully!', 3000);
+      
+      // Scroll to the first generated recipe after a short delay to ensure DOM update
+      setTimeout(() => {
+        const firstRecipe = document.querySelector('[data-generated-recipe]');
+        if (firstRecipe) {
+          firstRecipe.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate recipes';
-      alert(message);
+      error(message, 5000);
       console.error('Recipe generation error:', err);
     } finally {
       setIsGenerating(false);
@@ -603,18 +813,35 @@ export default function DashboardPage() {
               Clear
             </Button>
           </div>
-          {generatedRecipes.map((recipe, index) => (
-            <div key={index} className="space-y-4">
-              <RecipeCard recipe={recipe} />
-              <Button
-                onClick={() => handleSaveRecipe(recipe)}
-                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md text-white"
-              >
-                <Heart className="w-4 h-4 mr-2" />
-                Save This Recipe
-              </Button>
-            </div>
-          ))}
+          {generatedRecipes.map((recipe, index) => {
+            const isSaved = isRecipeSaved(recipe.title || '');
+            return (
+              <div key={index} className="space-y-4" data-generated-recipe={index === 0 ? 'first' : undefined}>
+                <RecipeCard recipe={recipe} />
+                <Button
+                  onClick={() => handleSaveRecipe(recipe)}
+                  disabled={isSaved}
+                  className={`w-full shadow-md transition-all ${
+                    isSaved
+                      ? 'bg-green-500 hover:bg-green-600 text-white cursor-not-allowed'
+                      : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
+                  }`}
+                >
+                  {isSaved ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Recipe Saved
+                    </>
+                  ) : (
+                    <>
+                      <Heart className="w-4 h-4 mr-2" />
+                      Save This Recipe
+                    </>
+                  )}
+                </Button>
+              </div>
+            );
+          })}
         </div>
       )}
     </>
@@ -791,33 +1018,25 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {savedRecipes.map((recipe) => (
-              <Card
-                key={recipe.id}
-                className="border-none shadow-sm dark:bg-card/50 cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => setSelectedRecipe(recipe)}
-              >
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold tracking-tight mb-1">{recipe.title}</h3>
-                      <p className="text-sm text-muted-foreground/80">
-                        {recipe.servings} servings • {recipe.prepTime}
-                      </p>
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (recipe.id) handleDeleteRecipe(recipe.id);
-                      }}
-                      className="ml-2 text-destructive hover:text-destructive/80"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+              <div key={recipe.id} className="space-y-4">
+                <div className="relative">
+                  <div onClick={() => setSelectedRecipe(recipe)} className="cursor-pointer">
+                    <RecipeCard recipe={recipe} />
                   </div>
-                </CardContent>
-              </Card>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (recipe.id) handleDeleteClick(recipe.id);
+                    }}
+                    className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white dark:bg-gray-800 shadow-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors border border-gray-200 dark:border-gray-700"
+                    title="Delete recipe"
+                  >
+                    <Trash2 className="w-5 h-5 text-red-500" />
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -828,18 +1047,35 @@ export default function DashboardPage() {
         <h2 className="text-2xl font-bold tracking-tight mb-4">Suggested Filipino Recipes 🇵🇭</h2>
         <p className="text-muted-foreground/80 mb-6">Popular Filipino dishes you might enjoy</p>
         <div className="space-y-6">
-          {suggestedFilipinoRecipes.map((recipe, index) => (
-            <div key={index} className="space-y-4">
-              <RecipeCard recipe={recipe} />
-              <Button
-                onClick={() => handleSaveRecipe(recipe)}
-                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md text-white"
-              >
-                <Heart className="w-4 h-4 mr-2" />
-                Save to Favorites
-              </Button>
-            </div>
-          ))}
+          {suggestedFilipinoRecipes.map((recipe, index) => {
+            const isSaved = isRecipeSaved(recipe.title || '');
+            return (
+              <div key={index} className="space-y-4">
+                <RecipeCard recipe={recipe} />
+                <Button
+                  onClick={() => handleSaveRecipe(recipe)}
+                  disabled={isSaved}
+                  className={`w-full shadow-md transition-all ${
+                    isSaved
+                      ? 'bg-green-500 hover:bg-green-600 text-white cursor-not-allowed'
+                      : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white'
+                  }`}
+                >
+                  {isSaved ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Already Saved
+                    </>
+                  ) : (
+                    <>
+                      <Heart className="w-4 h-4 mr-2" />
+                      Save to Favorites
+                    </>
+                  )}
+                </Button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -848,6 +1084,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50/40 via-white to-white dark:from-orange-950/20 dark:via-background dark:to-background pb-24">
       <Header />
+      <ToastContainer toasts={toasts} onClose={removeToast} />
       
       <main className="container mx-auto px-4 sm:px-6 py-6 max-w-6xl">
         {activeTab === 'home' && renderHomeTab()}
@@ -959,6 +1196,42 @@ export default function DashboardPage() {
                   className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-md text-white"
                 >
                   Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm.show && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={handleDeleteCancel}
+          >
+            <div
+              className="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-800 p-6 max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
+                Delete Recipe
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Are you sure you want to delete this recipe? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button
+                  onClick={handleDeleteCancel}
+                  variant="outline"
+                  className="border-gray-300 dark:border-gray-700"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteConfirm}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
                 </Button>
               </div>
             </div>

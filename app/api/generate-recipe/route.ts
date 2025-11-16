@@ -12,11 +12,58 @@ const getErrorMessage = (error: unknown): string => {
 
 export async function POST(request: NextRequest) {
   try {
-    const { ingredients, customization } = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
 
-    if (!ingredients || ingredients.length === 0) {
+    const { ingredients, customization } = body;
+
+    // Validate ingredients array
+    if (!ingredients || !Array.isArray(ingredients)) {
+      return NextResponse.json(
+        { error: 'Ingredients must be an array' },
+        { status: 400 }
+      );
+    }
+
+    if (ingredients.length === 0) {
       return NextResponse.json(
         { error: 'No ingredients provided' },
+        { status: 400 }
+      );
+    }
+
+    if (ingredients.length < 3) {
+      return NextResponse.json(
+        { error: 'At least 3 ingredients are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate and sanitize each ingredient
+    const validIngredients = ingredients
+      .filter((i: any) => {
+        if (!i || typeof i !== 'object') return false;
+        if (!i.name || typeof i.name !== 'string' || i.name.trim().length === 0) return false;
+        if (typeof i.quantity !== 'number' || i.quantity <= 0 || !isFinite(i.quantity)) return false;
+        if (!i.unit || typeof i.unit !== 'string' || i.unit.trim().length === 0) return false;
+        return true;
+      })
+      .map((i: any) => ({
+        name: i.name.trim(),
+        quantity: Math.max(0.1, Math.min(10000, i.quantity)),
+        unit: i.unit.trim()
+      }));
+
+    if (validIngredients.length < 3) {
+      return NextResponse.json(
+        { error: 'At least 3 valid ingredients are required. Please check that all ingredients have valid names, quantities, and units.' },
         { status: 400 }
       );
     }
@@ -29,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-    const ingredientList = ingredients
+    const ingredientList = validIngredients
       .map((i: any) => `${i.quantity} ${i.unit} ${i.name}`)
       .join(', ');
 
@@ -144,19 +191,51 @@ IMPORTANT:
         const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
         
         if (!jsonMatch) {
-          lastError = new Error('Invalid response format from Gemini');
+          lastError = new Error('Invalid response format from Gemini - no JSON found');
           continue;
         }
 
-        const responseData = JSON.parse(jsonMatch[0]);
-        
-        // Validate that we got 3 recipes
-        if (responseData.recipes && Array.isArray(responseData.recipes) && responseData.recipes.length === 3) {
-          return NextResponse.json(responseData);
-        } else {
-          lastError = new Error('Did not receive exactly 3 recipes');
+        let responseData;
+        try {
+          responseData = JSON.parse(jsonMatch[0]);
+        } catch (parseError) {
+          lastError = new Error('Failed to parse JSON response from Gemini');
           continue;
         }
+        
+        // Validate response structure
+        if (!responseData || typeof responseData !== 'object') {
+          lastError = new Error('Invalid response structure from Gemini');
+          continue;
+        }
+
+        if (!responseData.recipes || !Array.isArray(responseData.recipes)) {
+          lastError = new Error('Recipes array missing or invalid in response');
+          continue;
+        }
+
+        // Validate that we got at least some recipes (allow 1-3, not strictly 3)
+        if (responseData.recipes.length === 0) {
+          lastError = new Error('No recipes generated');
+          continue;
+        }
+
+        // Validate each recipe has at least a title
+        const validRecipes = responseData.recipes.filter((recipe: any) => {
+          return recipe && 
+                 typeof recipe === 'object' &&
+                 recipe.title && 
+                 typeof recipe.title === 'string' &&
+                 recipe.title.trim().length > 0;
+        });
+
+        if (validRecipes.length === 0) {
+          lastError = new Error('No valid recipes in response');
+          continue;
+        }
+
+        // Return valid recipes (can be 1-3)
+        return NextResponse.json({ recipes: validRecipes });
         
       } catch (error) {
         const errorMessage = getErrorMessage(error);
