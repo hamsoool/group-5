@@ -495,7 +495,7 @@ export default function DashboardPage() {
       warning('Please add at least 3 main ingredients to generate recipes');
       return;
     }
-
+  
     // Validate and sanitize ingredients
     const validIngredients = validateAndSanitizeIngredients(ingredients);
     
@@ -503,15 +503,43 @@ export default function DashboardPage() {
       warning('Please ensure all ingredients have valid names, quantities, and units. At least 3 valid ingredients are required.');
       return;
     }
-
+  
     setIsGenerating(true);
     try {
+      // Build comprehensive customization object based on ALL filter selections
       const customization = {
-        vegetarian: diet === 'Vegetarian' || diet === 'Vegan',
-        lowSalt: false,
-        budgetFriendly: goal === 'Budget'
+        // Dish Type
+        dishType: dishType, // 'Breakfast', 'Lunch', 'Dinner', 'Snack', 'Brunch', 'Dessert'
+        
+        // Diet preferences
+        diet: diet, // 'Vegetarian', 'Vegan', 'Keto', 'Paleo', 'Low-Carb', 'Pescatarian'
+        vegetarian: diet === 'Vegetarian',
+        vegan: diet === 'Vegan',
+        keto: diet === 'Keto',
+        paleo: diet === 'Paleo',
+        lowCarb: diet === 'Low-Carb',
+        pescatarian: diet === 'Pescatarian',
+        
+        // Time constraints
+        timeConstraint: time, // '< 15 min', '< 30 min', '< 60 min'
+        maxPrepTime: time === '< 15 min' ? 15 : time === '< 30 min' ? 30 : 60,
+        
+        // Goal
+        goal: goal, // 'Eat Healthy', 'Planning', 'Budget'
+        healthFocused: goal === 'Eat Healthy',
+        mealPlanning: goal === 'Planning',
+        budgetFriendly: goal === 'Budget',
+        
+        // Additional context
+        cuisine: 'Filipino', // Can be made dynamic later
+        servings: 4, // Default servings
       };
-
+  
+      console.log('Sending recipe generation request with:', {
+        ingredients: validIngredients,
+        customization
+      });
+  
       const response = await fetch('/api/generate-recipe', {
         method: 'POST',
         headers: {
@@ -522,12 +550,12 @@ export default function DashboardPage() {
           customization 
         }),
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
         throw new Error(errorData.error || `API error: ${response.status}`);
       }
-
+  
       const data = await response.json();
       
       // Validate response structure
@@ -542,11 +570,10 @@ export default function DashboardPage() {
       if (data.recipes.length === 0) {
         throw new Error('No recipes were generated. Please try again with different ingredients.');
       }
-
+  
       // Sanitize and validate each recipe
       const sanitizedRecipes = data.recipes
         .filter((recipe: any) => {
-          // Basic validation - recipe must have title and at least some ingredients/instructions
           return recipe && 
                  typeof recipe === 'object' &&
                  recipe.title && 
@@ -554,7 +581,6 @@ export default function DashboardPage() {
                  recipe.title.trim().length > 0;
         })
         .map((recipe: any) => {
-          // Ensure all required fields have safe defaults
           return {
             title: (recipe.title || 'Untitled Recipe').trim(),
             description: recipe.description && typeof recipe.description === 'string' ? recipe.description.trim() : undefined,
@@ -566,7 +592,7 @@ export default function DashboardPage() {
               : [],
             prepTime: recipe.prepTime && typeof recipe.prepTime === 'string' ? recipe.prepTime.trim() : 'N/A',
             cookingTime: recipe.cookingTime && typeof recipe.cookingTime === 'string' ? recipe.cookingTime.trim() : undefined,
-            servings: typeof recipe.servings === 'number' && recipe.servings > 0 ? recipe.servings : 1,
+            servings: typeof recipe.servings === 'number' && recipe.servings > 0 ? recipe.servings : 4,
             difficulty: recipe.difficulty && typeof recipe.difficulty === 'string' ? recipe.difficulty.trim() : undefined,
             calories: typeof recipe.calories === 'number' && recipe.calories > 0 ? recipe.calories : undefined,
             protein: recipe.protein && typeof recipe.protein === 'string' ? recipe.protein.trim() : undefined,
@@ -575,10 +601,10 @@ export default function DashboardPage() {
             healthTips: Array.isArray(recipe.healthTips) 
               ? recipe.healthTips.filter((tip: any) => tip && typeof tip === 'string' && tip.trim().length > 0).map((tip: string) => tip.trim())
               : undefined,
-            cuisine: recipe.cuisine && typeof recipe.cuisine === 'string' ? recipe.cuisine.trim() : undefined,
+            cuisine: recipe.cuisine && typeof recipe.cuisine === 'string' ? recipe.cuisine.trim() : 'Filipino',
           };
         });
-
+  
       if (sanitizedRecipes.length === 0) {
         throw new Error('No valid recipes were generated. Please try again.');
       }
@@ -586,7 +612,7 @@ export default function DashboardPage() {
       setGeneratedRecipes(sanitizedRecipes);
       success('Recipes generated successfully!', 3000);
       
-      // Scroll to the first generated recipe after a short delay to ensure DOM update
+      // Scroll to the first generated recipe
       setTimeout(() => {
         const firstRecipe = document.querySelector('[data-generated-recipe]');
         if (firstRecipe) {
