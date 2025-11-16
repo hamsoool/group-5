@@ -12,6 +12,9 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }
 ```
@@ -27,6 +30,13 @@ Documents contain:
 - prepTime: string
 - cookingTime: string
 - servings: number
+- createdAt: string (ISO timestamp)
+
+Collection: `users`
+Documents contain:
+- firstName: string
+- lastName: string
+- email: string
 - createdAt: string (ISO timestamp)
 
 ## Setup Steps

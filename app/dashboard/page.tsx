@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { Header } from '@/app/components/Header';
@@ -180,6 +180,8 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [generatedRecipes, setGeneratedRecipes] = useState<Recipe[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ firstName?: string; lastName?: string } | null>(null);
+  const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
   const router = useRouter();
 
   // Filter states
@@ -189,37 +191,26 @@ export default function DashboardPage() {
   const [goal, setGoal] = useState<string>('Budget');
   const [activeTab, setActiveTab] = useState<'home' | 'ingredients' | 'recipes' | 'profile'>('home');
 
-  // Load ingredients from localStorage on mount
+  // Save ingredients to Firestore whenever they change (but not during initial load)
   useEffect(() => {
-    const savedIngredients = localStorage.getItem('dashboard-ingredients');
-    if (savedIngredients) {
-      try {
-        const parsed = JSON.parse(savedIngredients);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setIngredients(parsed);
-        }
-      } catch (error) {
-        console.error('Error loading ingredients from localStorage:', error);
-      }
+    if (user && !isLoadingIngredients) {
+      saveIngredientsToFirestore(user.uid, ingredients);
     }
-  }, []);
-
-  // Save ingredients to localStorage whenever they change
-  useEffect(() => {
-    if (ingredients.length > 0) {
-      localStorage.setItem('dashboard-ingredients', JSON.stringify(ingredients));
-    } else {
-      localStorage.removeItem('dashboard-ingredients');
-    }
-  }, [ingredients]);
+  }, [ingredients, user, isLoadingIngredients]);
 
   // Check authentication and load recipes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
+        // Clear ingredients immediately when switching users
+        setIngredients([]);
         setUser(currentUser);
         loadRecipes(currentUser.uid);
+        loadUserProfile(currentUser.uid);
+        loadUserIngredients(currentUser.uid);
       } else {
+        // Clear ingredients when user logs out
+        setIngredients([]);
         router.push('/auth/login');
       }
     });
@@ -241,6 +232,59 @@ export default function DashboardPage() {
       console.error('Error loading recipes:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data();
+        console.log('User profile data loaded:', data);
+        setUserProfile({
+          firstName: data.firstName,
+          lastName: data.lastName
+        });
+      } else {
+        console.log('User profile document does not exist for userId:', userId);
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
+
+  const loadUserIngredients = async (userId: string) => {
+    try {
+      setIsLoadingIngredients(true);
+      const userDocRef = doc(db, 'users', userId);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data();
+        if (data.ingredients && Array.isArray(data.ingredients) && data.ingredients.length > 0) {
+          setIngredients(data.ingredients);
+        } else {
+          setIngredients([]);
+        }
+      } else {
+        setIngredients([]);
+      }
+    } catch (error) {
+      console.error('Error loading user ingredients:', error);
+      setIngredients([]);
+    } finally {
+      setIsLoadingIngredients(false);
+    }
+  };
+
+  const saveIngredientsToFirestore = async (userId: string, ingredientsToSave: Ingredient[]) => {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      await setDoc(userDocRef, {
+        ingredients: ingredientsToSave
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error saving ingredients to Firestore:', error);
     }
   };
 
@@ -655,13 +699,27 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h3 className="text-xl font-semibold tracking-tight">
-                  {user?.displayName || 'User'}
+                  {userProfile?.firstName || userProfile?.lastName
+                    ? `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim()
+                    : user?.displayName || 'User'}
                 </h3>
                 <p className="text-muted-foreground/80">{user?.email}</p>
               </div>
             </div>
             
             <div className="pt-4 border-t border-border space-y-3">
+              {userProfile?.firstName && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground/80">First Name</span>
+                  <span className="text-sm font-semibold text-foreground">{userProfile.firstName}</span>
+                </div>
+              )}
+              {userProfile?.lastName && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground/80">Last Name</span>
+                  <span className="text-sm font-semibold text-foreground">{userProfile.lastName}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground/80">User ID</span>
                 <span className="text-sm font-mono text-foreground/70">{user?.uid?.substring(0, 8)}...</span>

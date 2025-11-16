@@ -5,11 +5,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 
 export default function SignupPage() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -17,10 +21,39 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Validate password confirmation
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    // Validate required fields
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('First name and last name are required');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Save user profile data to Firestore
+      try {
+        await setDoc(doc(db, 'users', user.uid), {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email,
+          createdAt: new Date().toISOString()
+        });
+        console.log('User profile saved successfully');
+      } catch (profileError) {
+        console.error('Error saving user profile:', profileError);
+        // Continue anyway - profile can be updated later
+      }
+      
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
@@ -50,13 +83,35 @@ export default function SignupPage() {
         <h2 className="mb-6 text-center text-3xl font-bold text-black dark:text-white">Create an Account</h2>
         {error && <p className="mb-4 rounded-md bg-red-50 p-3 text-center text-sm text-red-500 dark:bg-red-900/20">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">First Name</label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Last Name</label>
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                required
+              />
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800"
+              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
               required
             />
           </div>
@@ -66,7 +121,17 @@ export default function SignupPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800"
+              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Confirm Password</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
               required
             />
           </div>
