@@ -5,6 +5,7 @@ import { Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { RecipeCard } from './RecipeCard';
+import { Skeleton } from './ui/skeleton';
 
 interface Recipe {
   id?: string;
@@ -184,7 +185,35 @@ export default function RecipeGenerator({ ingredients, onSaveRecipe }: RecipeGen
         </Card>
       )}
 
-      {recipes.length > 0 && (
+      {loading && (
+        <div className="space-y-6">
+          <div className="space-y-1">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="border-none shadow-sm dark:bg-card/50">
+              <CardContent className="pt-6">
+                <Skeleton className="h-8 w-3/4 mb-4" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-5/6 mb-4" />
+                <div className="space-y-2 mb-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-4/5" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {recipes.length > 0 && !loading && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">

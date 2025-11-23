@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { Header } from '@/app/components/Header';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -45,8 +46,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
-      <div className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black">
+      <Header />
+      <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="mb-6 text-center text-3xl font-bold text-black dark:text-white">Login to CookBot</h2>
         {error && <p className="mb-4 rounded-md bg-red-50 p-3 text-center text-sm text-red-500 dark:bg-red-900/20">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -105,6 +108,7 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
+        </div>
       </div>
     </div>
   );

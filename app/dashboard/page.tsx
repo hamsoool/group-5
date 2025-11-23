@@ -46,6 +46,7 @@ import IngredientManager from "@/app/components/IngredientManager";
 import { RecipeCard } from "@/app/components/RecipeCard";
 import { useToast } from "@/app/components/ui/use-toast";
 import { ToastContainer } from "@/app/components/ui/toast";
+import { Skeleton } from "@/app/components/ui/skeleton";
 
 interface Ingredient {
   id: string;
@@ -1194,7 +1195,8 @@ export default function DashboardPage() {
   };
 
   const getIngredientImage = (name: string) => {
-    return `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&h=100&fit=crop&q=80`;
+    const defaultImageUrl = `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&h=100&fit=crop&q=80`; // Generic food image
+    return defaultImageUrl;
   };
 
   const getIngredientCalories = (name: string) => {
@@ -1430,8 +1432,38 @@ export default function DashboardPage() {
         </Button>
       </div>
 
+      {/* Loading Skeleton for Recipe Generation */}
+      {isGenerating && (
+        <div className="space-y-6 mb-8">
+          <div className="space-y-1">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="border-none shadow-sm dark:bg-card/50">
+              <CardContent className="pt-6">
+                <Skeleton className="h-8 w-3/4 mb-4" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-5/6 mb-4" />
+                <div className="space-y-2 mb-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-4/5" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+                <Skeleton className="h-10 w-full mt-4 rounded-md" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* Generated Recipes Display */}
-      {generatedRecipes.length > 0 && (
+      {generatedRecipes.length > 0 && !isGenerating && (
         <div className="space-y-6 mb-8">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="text-2xl font-bold tracking-tight">Your Recipes</h2>
@@ -1797,11 +1829,25 @@ export default function DashboardPage() {
           My Favorite Recipes
         </h1>
         {loading ? (
-          <Card className="border-none shadow-sm dark:bg-card/50">
-            <CardContent className="pt-6 text-center">
-              <p className="text-muted-foreground/80">Loading recipes...</p>
-            </CardContent>
-          </Card>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="border-none shadow-sm dark:bg-card/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <Skeleton className="h-6 w-3/4 mb-2" />
+                      <div className="flex gap-3">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-10 w-10 rounded-full ml-4" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         ) : savedRecipes.length === 0 ? (
           <Card className="border-none shadow-sm dark:bg-card/50">
             <CardContent className="pt-6 text-center">
@@ -1962,7 +2008,7 @@ export default function DashboardPage() {
             onClick={() => setSelectedRecipe(null)}
           >
             <div
-              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-card border border-border shadow-lg"
+              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-neutral-50 dark:bg-card border border-border shadow-lg"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
@@ -2147,7 +2193,7 @@ export default function DashboardPage() {
             onClick={handleDeleteCancel}
           >
             <div
-              className="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-800 p-6 max-w-md w-full"
+              className="bg-neutral-50 dark:bg-gray-900 rounded-lg shadow-xl border border-gray-200 dark:border-gray-800 p-6 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
