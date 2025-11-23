@@ -115,11 +115,11 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       <CardHeader className="bg-gradient-to-br from-orange-50/80 via-amber-50/80 to-orange-100/60 dark:from-orange-950/30 dark:via-amber-950/30 dark:to-orange-900/20 pb-6 sm:pb-7 md:pb-8 pt-6 sm:pt-7 md:pt-8 border-b border-orange-100/50 dark:border-orange-900/30">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-5">
           <div className="flex-1 min-w-0">
-            <CardTitle className="mb-3 sm:mb-3.5 tracking-tight text-2xl sm:text-3xl font-bold break-words text-gray-900 dark:text-white">
+            <CardTitle className="mb-3 sm:mb-3.5 tracking-tight text-2xl sm:text-3xl font-bold break-words text-foreground">
               {title}
             </CardTitle>
             {description && (
-              <CardDescription className="leading-relaxed text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-2">
+              <CardDescription className="leading-relaxed text-sm sm:text-base text-muted-foreground mt-2">
                 {description}
               </CardDescription>
             )}
@@ -135,17 +135,17 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         </div>
 
         <div className="flex flex-wrap gap-4 sm:gap-5 md:gap-6 mt-5 sm:mt-6">
-          <div className="flex items-center gap-2.5 text-gray-700 dark:text-gray-300 text-sm sm:text-base font-medium">
+          <div className="flex items-center gap-2.5 text-muted-foreground text-sm sm:text-base font-medium">
             <Clock className="w-5 h-5 flex-shrink-0 text-orange-600 dark:text-orange-400" strokeWidth={2.5} />
             <span className="line-clamp-1">Prep: {prepTime}</span>
           </div>
           {cookTime && (
-            <div className="flex items-center gap-2.5 text-gray-700 dark:text-gray-300 text-sm sm:text-base font-medium">
+            <div className="flex items-center gap-2.5 text-muted-foreground text-sm sm:text-base font-medium">
               <ChefHat className="w-5 h-5 flex-shrink-0 text-orange-600 dark:text-orange-400" strokeWidth={2.5} />
               <span className="line-clamp-1">Cook: {cookTime}</span>
             </div>
           )}
-          <div className="flex items-center gap-2.5 text-gray-700 dark:text-gray-300 text-sm sm:text-base font-medium">
+          <div className="flex items-center gap-2.5 text-muted-foreground text-sm sm:text-base font-medium">
             <Users className="w-5 h-5 flex-shrink-0 text-orange-600 dark:text-orange-400" strokeWidth={2.5} />
             <span className="line-clamp-1">{servings} {servings === 1 ? 'serving' : 'servings'}</span>
           </div>
@@ -155,7 +155,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       <CardContent className="pt-6 sm:pt-7 md:pt-8 pb-6 sm:pb-7 md:pb-8 space-y-6 sm:space-y-7 md:space-y-8">
         {ingredients.length > 0 ? (
           <div>
-            <h3 className="mb-4 sm:mb-5 tracking-tight font-bold text-base sm:text-lg flex items-center gap-2.5 text-gray-900 dark:text-white">
+            <h3 className="mb-4 sm:mb-5 tracking-tight font-bold text-base sm:text-lg flex items-center gap-2.5 text-foreground">
               <Leaf
                 className="w-5 h-5 text-green-600 dark:text-green-400"
                 strokeWidth={2.5}
@@ -166,12 +166,12 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               {ingredients.map((ingredient, index) => (
                 <li
                   key={index}
-                  className="flex items-start gap-3 sm:gap-4 text-sm sm:text-base bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg border border-gray-100 dark:border-gray-800"
+                  className="flex items-start gap-3 sm:gap-4 text-sm sm:text-base bg-orange-50/50 dark:bg-orange-950/20 p-3 rounded-lg border border-orange-100 dark:border-orange-900/50"
                 >
                   <span className="text-xl sm:text-2xl mt-0.5 flex-shrink-0">
                     {getIngredientIcon(ingredient)}
                   </span>
-                  <span className="leading-relaxed text-gray-700 dark:text-gray-300 flex-1">{ingredient}</span>
+                  <span className="leading-relaxed text-foreground flex-1">{ingredient}</span>
                 </li>
               ))}
             </ul>
@@ -186,7 +186,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           <>
             <Separator className="my-2" />
             <div>
-              <h3 className="mb-4 sm:mb-5 tracking-tight font-bold text-base sm:text-lg flex items-center gap-2.5 text-gray-900 dark:text-white">
+              <h3 className="mb-4 sm:mb-5 tracking-tight font-bold text-base sm:text-lg flex items-center gap-2.5 text-foreground">
                 <Flame
                   className="w-5 h-5 text-orange-600 dark:text-orange-400"
                   strokeWidth={2.5}
@@ -206,7 +206,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
                       <span className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white text-sm sm:text-base shrink-0 shadow-md font-bold">
                         {index + 1}
                       </span>
-                      <span className="flex-1 pt-1 sm:pt-1.5 leading-relaxed text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/30 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                      <span className="flex-1 pt-1 sm:pt-1.5 leading-relaxed text-foreground bg-orange-50/50 dark:bg-orange-950/20 p-3 rounded-lg border border-orange-100 dark:border-orange-900/50">
                         {stepText}
                       </span>
                     </li>
@@ -225,7 +225,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           <>
             <Separator className="my-2" />
             <div>
-              <h3 className="mb-4 sm:mb-5 tracking-tight font-bold text-base sm:text-lg flex items-center gap-2.5 text-gray-900 dark:text-white">
+              <h3 className="mb-4 sm:mb-5 tracking-tight font-bold text-base sm:text-lg flex items-center gap-2.5 text-foreground">
                 <Lightbulb
                   className="w-5 h-5 text-amber-600 dark:text-amber-400"
                   strokeWidth={2.5}

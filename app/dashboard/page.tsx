@@ -1307,7 +1307,7 @@ export default function DashboardPage() {
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     dishType === type
                       ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md"
-                      : "bg-amber-50 dark:bg-amber-950/30 text-foreground hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                      : "bg-orange-50 dark:bg-orange-950/30 text-foreground hover:bg-orange-100 dark:hover:bg-orange-900/40"
                   }`}
                 >
                   {type}
@@ -1349,7 +1349,7 @@ export default function DashboardPage() {
                       ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md"
                       : shouldDisable
                       ? "bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
-                      : "bg-amber-50 dark:bg-amber-950/30 text-foreground hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                      : "bg-orange-50 dark:bg-orange-950/30 text-foreground hover:bg-orange-100 dark:hover:bg-orange-900/40"
                   }`}
                   title={
                     shouldDisable
@@ -1378,7 +1378,7 @@ export default function DashboardPage() {
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   time === timeOption
                     ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md"
-                    : "bg-amber-50 dark:bg-amber-950/30 text-foreground hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                    : "bg-orange-50 dark:bg-orange-950/30 text-foreground hover:bg-orange-100 dark:hover:bg-orange-900/40"
                 }`}
               >
                 {timeOption}
@@ -1400,7 +1400,7 @@ export default function DashboardPage() {
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   goal === goalOption
                     ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md"
-                    : "bg-amber-50 dark:bg-amber-950/30 text-foreground hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                    : "bg-orange-50 dark:bg-orange-950/30 text-foreground hover:bg-orange-100 dark:hover:bg-orange-900/40"
                 }`}
               >
                 {goalOption}
@@ -1991,7 +1991,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50/40 via-white to-white dark:from-orange-950/20 dark:via-background dark:to-background pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100 dark:from-background dark:via-background dark:to-orange-950 pb-24">
       <Header />
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
