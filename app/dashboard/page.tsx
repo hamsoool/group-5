@@ -225,6 +225,8 @@ export default function DashboardPage() {
     show: boolean;
     recipeId: string | null;
   }>({ show: false, recipeId: null });
+  const [showNutrition, setShowNutrition] = useState(true);
+  const [showHealthTips, setShowHealthTips] = useState(true);
   const { toasts, success, error, warning, info, removeToast } = useToast();
   const router = useRouter();
 
@@ -548,6 +550,123 @@ export default function DashboardPage() {
       router.push("/auth/login");
     } catch (error) {
       console.error("Error signing out:", error);
+    }
+  };
+
+  const copyRecipe = (recipe: Recipe) => {
+    const text = `${recipe.title}\n\n${recipe.description ? recipe.description + '\n\n' : ''}Ingredients:\n${recipe.ingredients.join('\n')}\n\nInstructions:\n${recipe.instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n')}\n\nPrep Time: ${recipe.prepTime}${recipe.cookingTime ? `\nCooking Time: ${recipe.cookingTime}` : ''}\nServings: ${recipe.servings}`;
+    
+    navigator.clipboard.writeText(text).then(() => {
+      success('Recipe copied to clipboard!', 2000);
+    }).catch(() => {
+      error('Failed to copy recipe', 2000);
+    });
+  };
+
+  const printRecipe = (recipe: Recipe) => {
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>${recipe.title}</title>
+            <style>
+              body { 
+                font-family: Arial, sans-serif; 
+                padding: 40px; 
+                max-width: 800px; 
+                margin: 0 auto;
+                line-height: 1.6;
+              }
+              h1 { 
+                color: #ea580c; 
+                margin-bottom: 10px;
+                border-bottom: 3px solid #ea580c;
+                padding-bottom: 10px;
+              }
+              .description {
+                color: #666;
+                font-style: italic;
+                margin-bottom: 20px;
+              }
+              .meta { 
+                color: #666; 
+                margin: 20px 0;
+                padding: 15px;
+                background: #f9f9f9;
+                border-radius: 8px;
+              }
+              h2 { 
+                color: #333; 
+                margin-top: 30px;
+                border-left: 4px solid #ea580c;
+                padding-left: 10px;
+              }
+              ul, ol { 
+                margin: 15px 0;
+                padding-left: 30px;
+              }
+              li { 
+                margin: 8px 0;
+              }
+              .nutrition {
+                background: #f0fdf4;
+                border: 1px solid #86efac;
+                border-radius: 8px;
+                padding: 15px;
+                margin: 20px 0;
+              }
+              .health-tips {
+                background: #eff6ff;
+                border: 1px solid #93c5fd;
+                border-radius: 8px;
+                padding: 15px;
+                margin: 20px 0;
+              }
+              @media print {
+                body { padding: 20px; }
+              }
+            </style>
+          </head>
+          <body>
+            <h1>${recipe.title}</h1>
+            ${recipe.description ? `<p class="description">${recipe.description}</p>` : ''}
+            <div class="meta">
+              <strong>Prep Time:</strong> ${recipe.prepTime} | 
+              ${recipe.cookingTime ? `<strong>Cook Time:</strong> ${recipe.cookingTime} | ` : ''}
+              <strong>Servings:</strong> ${recipe.servings}
+              ${recipe.difficulty ? ` | <strong>Difficulty:</strong> ${recipe.difficulty}` : ''}
+            </div>
+            
+            <h2>Ingredients</h2>
+            <ul>${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}</ul>
+            
+            <h2>Instructions</h2>
+            <ol>${recipe.instructions.map(inst => `<li>${inst}</li>`).join('')}</ol>
+            
+            ${recipe.calories ? `
+              <div class="nutrition">
+                <h2>Nutrition Information (per serving)</h2>
+                <p>
+                  <strong>Calories:</strong> ${recipe.calories} kcal<br>
+                  ${recipe.protein ? `<strong>Protein:</strong> ${recipe.protein}<br>` : ''}
+                  ${recipe.carbs ? `<strong>Carbs:</strong> ${recipe.carbs}<br>` : ''}
+                  ${recipe.fat ? `<strong>Fat:</strong> ${recipe.fat}` : ''}
+                </p>
+              </div>
+            ` : ''}
+            
+            ${recipe.healthTips && recipe.healthTips.length > 0 ? `
+              <div class="health-tips">
+                <h2>Health Tips</h2>
+                <ul>${recipe.healthTips.map(tip => `<li>${tip}</li>`).join('')}</ul>
+              </div>
+            ` : ''}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
     }
   };
 
@@ -1644,66 +1763,106 @@ export default function DashboardPage() {
                 </div>
 
                 {selectedRecipe.calories && (
-                  <div className="mb-6 rounded-md bg-green-50/80 dark:bg-green-950/30 border border-green-100 dark:border-green-900 p-4">
-                    <h3 className="mb-3 text-xl font-semibold text-green-900 dark:text-green-400 tracking-tight">
-                      Nutrition (per serving)
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <span className="font-medium text-green-700 dark:text-green-300">
-                          Calories:
-                        </span>{" "}
-                        <span className="text-green-600 dark:text-green-400">
-                          {selectedRecipe.calories} kcal
-                        </span>
+                  <div className="mb-6">
+                    <button
+                      onClick={() => setShowNutrition(!showNutrition)}
+                      className="mb-2 flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors"
+                    >
+                      <span>{showNutrition ? '▼' : '▶'}</span>
+                      <span>{showNutrition ? 'Hide' : 'Show'} Nutrition Information</span>
+                    </button>
+                    {showNutrition && (
+                      <div className="rounded-md bg-green-50/80 dark:bg-green-950/30 border border-green-100 dark:border-green-900 p-4">
+                        <h3 className="mb-3 text-xl font-semibold text-green-900 dark:text-green-400 tracking-tight">
+                          Nutrition (per serving)
+                        </h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <span className="font-medium text-green-700 dark:text-green-300">
+                              Calories:
+                            </span>{" "}
+                            <span className="text-green-600 dark:text-green-400">
+                              {selectedRecipe.calories} kcal
+                            </span>
+                          </div>
+                          {selectedRecipe.protein && (
+                            <div>
+                              <span className="font-medium text-green-700 dark:text-green-300">
+                                Protein:
+                              </span>{" "}
+                              <span className="text-green-600 dark:text-green-400">
+                                {selectedRecipe.protein}
+                              </span>
+                            </div>
+                          )}
+                          {selectedRecipe.carbs && (
+                            <div>
+                              <span className="font-medium text-green-700 dark:text-green-300">
+                                Carbs:
+                              </span>{" "}
+                              <span className="text-green-600 dark:text-green-400">
+                                {selectedRecipe.carbs}
+                              </span>
+                            </div>
+                          )}
+                          {selectedRecipe.fat && (
+                            <div>
+                              <span className="font-medium text-green-700 dark:text-green-300">
+                                Fat:
+                              </span>{" "}
+                              <span className="text-green-600 dark:text-green-400">
+                                {selectedRecipe.fat}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      {selectedRecipe.protein && (
-                        <div>
-                          <span className="font-medium text-green-700 dark:text-green-300">
-                            Protein:
-                          </span>{" "}
-                          <span className="text-green-600 dark:text-green-400">
-                            {selectedRecipe.protein}
-                          </span>
-                        </div>
-                      )}
-                      {selectedRecipe.carbs && (
-                        <div>
-                          <span className="font-medium text-green-700 dark:text-green-300">
-                            Carbs:
-                          </span>{" "}
-                          <span className="text-green-600 dark:text-green-400">
-                            {selectedRecipe.carbs}
-                          </span>
-                        </div>
-                      )}
-                      {selectedRecipe.fat && (
-                        <div>
-                          <span className="font-medium text-green-700 dark:text-green-300">
-                            Fat:
-                          </span>{" "}
-                          <span className="text-green-600 dark:text-green-400">
-                            {selectedRecipe.fat}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
                 )}
 
                 {selectedRecipe.healthTips &&
                   selectedRecipe.healthTips.length > 0 && (
-                    <div className="mb-6 rounded-md bg-blue-50/80 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 p-4">
-                      <h3 className="mb-3 text-xl font-semibold text-blue-900 dark:text-blue-400 tracking-tight">
-                        Health Tips
-                      </h3>
-                      <ul className="list-inside list-disc space-y-2 text-blue-800 dark:text-blue-200">
-                        {selectedRecipe.healthTips.map((tip, tipIdx) => (
-                          <li key={tipIdx}>{tip}</li>
-                        ))}
-                      </ul>
+                    <div className="mb-6">
+                      <button
+                        onClick={() => setShowHealthTips(!showHealthTips)}
+                        className="mb-2 flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                      >
+                        <span>{showHealthTips ? '▼' : '▶'}</span>
+                        <span>{showHealthTips ? 'Hide' : 'Show'} Health Tips</span>
+                      </button>
+                      {showHealthTips && (
+                        <div className="rounded-md bg-blue-50/80 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 p-4">
+                          <h3 className="mb-3 text-xl font-semibold text-blue-900 dark:text-blue-400 tracking-tight">
+                            Health Tips
+                          </h3>
+                          <ul className="list-inside list-disc space-y-2 text-blue-800 dark:text-blue-200">
+                            {selectedRecipe.healthTips.map((tip, tipIdx) => (
+                              <li key={tipIdx}>{tip}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 mb-4">
+                  <Button
+                    onClick={() => printRecipe(selectedRecipe)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    🖨️ Print
+                  </Button>
+                  <Button
+                    onClick={() => copyRecipe(selectedRecipe)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    📋 Copy
+                  </Button>
+                </div>
 
                 <Button
                   onClick={() => setSelectedRecipe(null)}

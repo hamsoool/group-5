@@ -67,7 +67,21 @@ Documents contain:
    - Enter support email
    - Click "Save"
 
-### 3. Update Firestore Rules
+### 3. Add Authorized Domains (Important for Google Sign-In)
+**This step is required to fix `auth/unauthorized-domain` error**
+
+1. In Firebase Console, go to **Authentication** → **Settings**
+2. Click on the **Authorized domains** tab
+3. Click **Add domain**
+4. Add the following domains for local development:
+   - `localhost` (required for local development)
+   - `127.0.0.1` (alternative localhost address)
+5. Click **Add** for each domain
+6. If deploying to production, also add your production domain
+
+**Note:** Only add the domain name without port (e.g., `localhost`, NOT `localhost:3000`)
+
+### 4. Update Firestore Rules
 Go to **Firestore Database → Rules** and paste the rules from above.
 
 ## Features
@@ -77,3 +91,22 @@ Go to **Firestore Database → Rules** and paste the rules from above.
 - ✅ User-specific recipes (each user sees only their recipes)
 - ✅ Secure Firestore rules
 - ✅ Auto-redirect to login if not authenticated
+
+## Troubleshooting
+
+### Error: `auth/unauthorized-domain`
+**Cause:** Your domain (localhost) is not authorized in Firebase
+
+**Solution:**
+1. Go to Firebase Console → Authentication → Settings → Authorized domains
+2. Add `localhost` and `127.0.0.1` to the authorized domains list
+3. Click Save and refresh your app
+4. Try signing in with Google again
+
+### Error: Google Sign-In popup closes immediately
+**Cause:** Google provider may not be properly enabled
+
+**Solution:**
+1. Go to Firebase Console → Authentication → Sign-in method
+2. Ensure Google provider is **Enabled** with a valid support email
+3. Save changes and try again

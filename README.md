@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CookBot - AI Recipe Generator
 
-## Getting Started
+Generate delicious Filipino recipes from your ingredients using AI!
 
-First, run the development server:
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Set Up Environment Variables
+
+Create a `.env.local` file in the root folder:
+
+```bash
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+Get your Gemini API key from: https://makersuite.google.com/app/apikey
+
+### 3. Set Up Firebase
+
+1. Go to [Firebase Console](https://console.firebase.google.com)
+2. Select your project
+3. Enable **Authentication** → Email/Password and Google Sign-in
+4. Enable **Firestore Database**
+5. Add your domain to **Authentication → Settings → Authorized domains**:
+   - Add `localhost` for local development
+
+For detailed Firebase setup, see [FIREBASE_SETUP.md](FIREBASE_SETUP.md)
+
+### 4. Run the App
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Firebase Authentication** - Sign in with email or Google
+- **AI Recipe Generation** - Get 3 Filipino recipes from your ingredients
+- **Save Recipes** - Store your favorite recipes
+- **Nutrition Info** - See calories, protein, carbs, and fat
+- **Health Tips** - Get helpful nutrition advice
+- **Print & Copy** - Share recipes easily
+- **Dark Mode** - Easy on the eyes
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Next.js 16** - React framework
+- **Firebase** - Authentication & Database
+- **Google Gemini AI** - Recipe generation
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## How to Use
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Sign up** or **Log in** with email or Google
+2. **Add 2-3 ingredients** (e.g., chicken, onion, tomato)
+3. **Select preferences** (optional): Vegetarian, Low-Salt, Budget-Friendly
+4. **Generate recipes** - Get 3 Filipino recipes instantly
+5. **Save favorites** - Click the heart icon to save recipes
+6. **View saved recipes** - Access them anytime in the Recipes tab
 
-## Deploy on Vercel
+## Troubleshooting
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### "Gemini API key not configured"
+- Make sure you created `.env.local` with your API key
+- Restart the dev server after adding the key
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### "Firebase: Error (auth/unauthorized-domain)"
+- Go to Firebase Console → Authentication → Settings → Authorized domains
+- Add `localhost` to the list
+
+### Module not found errors
+- Run `npm install` to install all dependencies
+- Delete `node_modules` and run `npm install` again if needed
+
+## License
+
+This project is for educational purposes.
+
+## Contributors
+
+Group 5 - Recipe Generator Team

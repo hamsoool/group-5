@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { RecipeCard } from './RecipeCard';
@@ -150,13 +149,13 @@ export default function RecipeGenerator({ ingredients, onSaveRecipe }: RecipeGen
         size="lg"
       >
         {loading ? (
-          <>
-            <Sparkles className="w-4 h-4 mr-2 animate-spin" strokeWidth={2} />
+            <>
+            <span className="w-4 h-4 mr-2 inline-block animate-spin">✨</span>
             Generating Your Recipes...
           </>
         ) : (
-          <>
-            <Sparkles className="w-4 h-4 mr-2" strokeWidth={2} />
+            <>
+            <span className="w-4 h-4 mr-2 inline-block">✨</span>
             Generate 3 Recipes
           </>
         )}

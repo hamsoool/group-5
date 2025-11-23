@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Plus, X } from "lucide-react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -772,7 +771,7 @@ export default function IngredientManager({
         className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         size="lg"
       >
-        <Plus className="w-4 h-4 mr-2" />
+        <span className="mr-2">➕</span>
         Add Ingredient
       </Button>
 
@@ -793,7 +792,7 @@ export default function IngredientManager({
                 className="ml-1 hover:text-destructive transition-colors flex-shrink-0"
                 aria-label={`Remove ${ingredient.name}`}
               >
-                <X className="w-3 sm:w-3.5 h-3 sm:h-3.5" strokeWidth={2} />
+                <span aria-hidden>✖️</span>
               </button>
             </Badge>
           ))}
