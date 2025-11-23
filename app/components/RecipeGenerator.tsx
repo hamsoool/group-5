@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { RecipeCard } from './RecipeCard';
@@ -47,6 +48,16 @@ export default function RecipeGenerator({ ingredients, onSaveRecipe }: RecipeGen
     lowSalt: false,
     budgetFriendly: false,
   });
+
+  // Check if ingredients contain meat or fish
+  const hasMeatOrFish = ingredients.some(
+    (ingredient) => ingredient.type === 'meat' || ingredient.type === 'fish'
+  );
+
+  // Auto-disable vegetarian if meat/fish is added
+  if (hasMeatOrFish && customization.vegetarian) {
+    setCustomization({ ...customization, vegetarian: false });
+  }
 
   const generateRecipe = async () => {
     if (ingredients.length === 0) {
@@ -111,14 +122,18 @@ export default function RecipeGenerator({ ingredients, onSaveRecipe }: RecipeGen
         <CardContent className="pt-6">
           <h3 className="mb-3 font-semibold tracking-tight">Recipe Preferences</h3>
           <div className="space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className={`flex items-center gap-2 ${hasMeatOrFish ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
               <input
                 type="checkbox"
                 checked={customization.vegetarian}
                 onChange={(e) => setCustomization({ ...customization, vegetarian: e.target.checked })}
-                className="h-4 w-4 rounded border-input"
+                disabled={hasMeatOrFish}
+                className="h-4 w-4 rounded border-input disabled:cursor-not-allowed"
               />
-              <span className="text-sm text-muted-foreground/80">Vegetarian</span>
+              <span className="text-sm text-muted-foreground/80">
+                Vegetarian
+                {hasMeatOrFish && <span className="ml-2 text-xs text-red-500">(Contains meat/fish)</span>}
+              </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -149,13 +164,13 @@ export default function RecipeGenerator({ ingredients, onSaveRecipe }: RecipeGen
         size="lg"
       >
         {loading ? (
-            <>
-            <span className="w-4 h-4 mr-2 inline-block animate-spin">✨</span>
+          <>
+            <Sparkles className="w-4 h-4 mr-2 animate-spin" strokeWidth={2} />
             Generating Your Recipes...
           </>
         ) : (
-            <>
-            <span className="w-4 h-4 mr-2 inline-block">✨</span>
+          <>
+            <Sparkles className="w-4 h-4 mr-2" strokeWidth={2} />
             Generate 3 Recipes
           </>
         )}

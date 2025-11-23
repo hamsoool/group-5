@@ -244,7 +244,19 @@ export default function DashboardPage() {
     if (user && !isLoadingIngredients) {
       saveIngredientsToFirestore(user.uid, ingredients);
     }
-  }, [ingredients, user, isLoadingIngredients]);
+
+    // Auto-switch away from Vegetarian/Vegan if meat or fish is added
+    const hasMeatOrFish = ingredients.some(
+      (ing) => ing.type === "meat" || ing.type === "fish"
+    );
+    if (hasMeatOrFish && (diet === "Vegetarian" || diet === "Vegan")) {
+      setDiet("Keto"); // Switch to a neutral diet option
+      warning(
+        `Switched from ${diet} to Keto because you added meat or fish`,
+        3000
+      );
+    }
+  }, [ingredients, user, isLoadingIngredients, diet]);
 
   // Check authentication and load recipes
   useEffect(() => {
@@ -1186,19 +1198,37 @@ export default function DashboardPage() {
               "Paleo",
               "Low-Carb",
               "Pescatarian",
-            ].map((dietType) => (
-              <button
-                key={dietType}
-                onClick={() => setDiet(dietType)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  diet === dietType
-                    ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md"
-                    : "bg-amber-50 dark:bg-amber-950/30 text-foreground hover:bg-amber-100 dark:hover:bg-amber-900/40"
-                }`}
-              >
-                {dietType}
-              </button>
-            ))}
+            ].map((dietType) => {
+              // Check if current diet option should be disabled (Vegetarian/Vegan with meat/fish)
+              const hasMeatOrFish = ingredients.some(
+                (ing) => ing.type === "meat" || ing.type === "fish"
+              );
+              const shouldDisable =
+                hasMeatOrFish && (dietType === "Vegetarian" || dietType === "Vegan");
+
+              return (
+                <button
+                  key={dietType}
+                  onClick={() => !shouldDisable && setDiet(dietType)}
+                  disabled={shouldDisable}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    diet === dietType
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md"
+                      : shouldDisable
+                      ? "bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                      : "bg-amber-50 dark:bg-amber-950/30 text-foreground hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                  }`}
+                  title={
+                    shouldDisable
+                      ? "Cannot select - ingredients contain meat or fish"
+                      : ""
+                  }
+                >
+                  {dietType}
+                  {shouldDisable && <span className="ml-1 text-xs">🚫</span>}
+                </button>
+              );
+            })}
           </div>
         </div>
 
