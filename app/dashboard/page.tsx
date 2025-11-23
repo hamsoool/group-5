@@ -496,6 +496,7 @@ export default function DashboardPage() {
       return;
     }
 
+    setLoading(true);
     try {
       const userDocRef = doc(db, "users", user.uid);
       await setDoc(
@@ -515,10 +516,12 @@ export default function DashboardPage() {
       });
 
       setIsEditingProfile(false);
-      success("Profile updated successfully!");
+      success("Profile updated successfully!", 3000);
     } catch (err) {
       console.error("Error updating profile:", err);
-      error("Failed to update profile. Please try again.");
+      error("Failed to update profile. Please try again.", 4000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -537,16 +540,19 @@ export default function DashboardPage() {
       return;
     }
 
+    setLoading(true);
     // Check if recipe already exists (by title)
     const recipeTitle = recipe.title?.trim() || "";
     if (!recipeTitle) {
       error("Recipe title is required");
+      setLoading(false);
       return;
     }
 
     // Check for duplicate by title (case-insensitive)
     if (isRecipeSaved(recipeTitle)) {
       warning("This recipe is already saved!");
+      setLoading(false);
       return;
     }
 
@@ -620,6 +626,8 @@ export default function DashboardPage() {
       }
 
       error(errorMessage, 5000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -633,17 +641,28 @@ export default function DashboardPage() {
   };
 
   const copyRecipe = (recipe: Recipe) => {
-    const text = `${recipe.title}\n\n${recipe.description ? recipe.description + '\n\n' : ''}Ingredients:\n${recipe.ingredients.join('\n')}\n\nInstructions:\n${recipe.instructions.map((inst, i) => `${i + 1}. ${inst}`).join('\n')}\n\nPrep Time: ${recipe.prepTime}${recipe.cookingTime ? `\nCooking Time: ${recipe.cookingTime}` : ''}\nServings: ${recipe.servings}`;
-    
-    navigator.clipboard.writeText(text).then(() => {
-      success('Recipe copied to clipboard!', 2000);
-    }).catch(() => {
-      error('Failed to copy recipe', 2000);
-    });
+    const text = `${recipe.title}\n\n${
+      recipe.description ? recipe.description + "\n\n" : ""
+    }Ingredients:\n${recipe.ingredients.join(
+      "\n"
+    )}\n\nInstructions:\n${recipe.instructions
+      .map((inst, i) => `${i + 1}. ${inst}`)
+      .join("\n")}\n\nPrep Time: ${recipe.prepTime}${
+      recipe.cookingTime ? `\nCooking Time: ${recipe.cookingTime}` : ""
+    }\nServings: ${recipe.servings}`;
+
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        success("Recipe copied to clipboard!", 2000);
+      })
+      .catch(() => {
+        error("Failed to copy recipe", 2000);
+      });
   };
 
   const printRecipe = (recipe: Recipe) => {
-    const printWindow = window.open('', '', 'width=800,height=600');
+    const printWindow = window.open("", "", "width=800,height=600");
     if (printWindow) {
       printWindow.document.write(`
         <html>
@@ -709,38 +728,72 @@ export default function DashboardPage() {
           </head>
           <body>
             <h1>${recipe.title}</h1>
-            ${recipe.description ? `<p class="description">${recipe.description}</p>` : ''}
+            ${
+              recipe.description
+                ? `<p class="description">${recipe.description}</p>`
+                : ""
+            }
             <div class="meta">
               <strong>Prep Time:</strong> ${recipe.prepTime} | 
-              ${recipe.cookingTime ? `<strong>Cook Time:</strong> ${recipe.cookingTime} | ` : ''}
+              ${
+                recipe.cookingTime
+                  ? `<strong>Cook Time:</strong> ${recipe.cookingTime} | `
+                  : ""
+              }
               <strong>Servings:</strong> ${recipe.servings}
-              ${recipe.difficulty ? ` | <strong>Difficulty:</strong> ${recipe.difficulty}` : ''}
+              ${
+                recipe.difficulty
+                  ? ` | <strong>Difficulty:</strong> ${recipe.difficulty}`
+                  : ""
+              }
             </div>
             
             <h2>Ingredients</h2>
-            <ul>${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}</ul>
+            <ul>${recipe.ingredients
+              .map((ing) => `<li>${ing}</li>`)
+              .join("")}</ul>
             
             <h2>Instructions</h2>
-            <ol>${recipe.instructions.map(inst => `<li>${inst}</li>`).join('')}</ol>
+            <ol>${recipe.instructions
+              .map((inst) => `<li>${inst}</li>`)
+              .join("")}</ol>
             
-            ${recipe.calories ? `
+            ${
+              recipe.calories
+                ? `
               <div class="nutrition">
                 <h2>Nutrition Information (per serving)</h2>
                 <p>
                   <strong>Calories:</strong> ${recipe.calories} kcal<br>
-                  ${recipe.protein ? `<strong>Protein:</strong> ${recipe.protein}<br>` : ''}
-                  ${recipe.carbs ? `<strong>Carbs:</strong> ${recipe.carbs}<br>` : ''}
-                  ${recipe.fat ? `<strong>Fat:</strong> ${recipe.fat}` : ''}
+                  ${
+                    recipe.protein
+                      ? `<strong>Protein:</strong> ${recipe.protein}<br>`
+                      : ""
+                  }
+                  ${
+                    recipe.carbs
+                      ? `<strong>Carbs:</strong> ${recipe.carbs}<br>`
+                      : ""
+                  }
+                  ${recipe.fat ? `<strong>Fat:</strong> ${recipe.fat}` : ""}
                 </p>
               </div>
-            ` : ''}
+            `
+                : ""
+            }
             
-            ${recipe.healthTips && recipe.healthTips.length > 0 ? `
+            ${
+              recipe.healthTips && recipe.healthTips.length > 0
+                ? `
               <div class="health-tips">
                 <h2>Health Tips</h2>
-                <ul>${recipe.healthTips.map(tip => `<li>${tip}</li>`).join('')}</ul>
+                <ul>${recipe.healthTips
+                  .map((tip) => `<li>${tip}</li>`)
+                  .join("")}</ul>
               </div>
-            ` : ''}
+            `
+                : ""
+            }
           </body>
         </html>
       `);
@@ -760,6 +813,7 @@ export default function DashboardPage() {
       return;
     }
 
+    setLoading(true);
     // Find the recipe to get its title for updating savedRecipeIds
     const recipeToDelete = savedRecipes.find((r) => r.id === id);
 
@@ -784,6 +838,7 @@ export default function DashboardPage() {
       console.error("Error deleting recipe:", err);
       error("Failed to delete recipe. Please try again.", 5000);
     } finally {
+      setLoading(false);
       setDeleteConfirm({ show: false, recipeId: null });
     }
   };
@@ -1271,7 +1326,8 @@ export default function DashboardPage() {
                 (ing) => ing.type === "meat" || ing.type === "fish"
               );
               const shouldDisable =
-                hasMeatOrFish && (dietType === "Vegetarian" || dietType === "Vegan");
+                hasMeatOrFish &&
+                (dietType === "Vegetarian" || dietType === "Vegan");
 
               return (
                 <button
@@ -1965,8 +2021,10 @@ export default function DashboardPage() {
                       onClick={() => setShowNutrition(!showNutrition)}
                       className="mb-2 flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors"
                     >
-                      <span>{showNutrition ? '▼' : '▶'}</span>
-                      <span>{showNutrition ? 'Hide' : 'Show'} Nutrition Information</span>
+                      <span>{showNutrition ? "▼" : "▶"}</span>
+                      <span>
+                        {showNutrition ? "Hide" : "Show"} Nutrition Information
+                      </span>
                     </button>
                     {showNutrition && (
                       <div className="rounded-md bg-green-50/80 dark:bg-green-950/30 border border-green-100 dark:border-green-900 p-4">
@@ -2025,8 +2083,10 @@ export default function DashboardPage() {
                         onClick={() => setShowHealthTips(!showHealthTips)}
                         className="mb-2 flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                       >
-                        <span>{showHealthTips ? '▼' : '▶'}</span>
-                        <span>{showHealthTips ? 'Hide' : 'Show'} Health Tips</span>
+                        <span>{showHealthTips ? "▼" : "▶"}</span>
+                        <span>
+                          {showHealthTips ? "Hide" : "Show"} Health Tips
+                        </span>
                       </button>
                       {showHealthTips && (
                         <div className="rounded-md bg-blue-50/80 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 p-4">
