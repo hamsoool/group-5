@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   collection,
@@ -253,6 +253,14 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<
     "home" | "ingredients" | "recipes" | "profile"
   >("home");
+  const mainRef = useRef<HTMLDivElement>(null);
+
+  // Smooth scroll to top on tab change
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [activeTab]);
 
   // Save ingredients to Firestore whenever they change (but not during initial load)
   useEffect(() => {
@@ -2176,22 +2184,26 @@ export default function DashboardPage() {
           <div className="flex items-center justify-around py-2">
             <button
               onClick={() => setActiveTab("home")}
-              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors ${
+              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors focus:outline-none ${
                 activeTab === "home"
                   ? "text-orange-500"
                   : "text-muted-foreground"
               }`}
+              aria-current={activeTab === "home" ? "page" : undefined}
+              tabIndex={0}
             >
               <Home className="w-5 h-5" />
               <span className="text-xs font-medium">Home</span>
             </button>
             <button
               onClick={() => setActiveTab("ingredients")}
-              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors relative ${
+              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors relative focus:outline-none ${
                 activeTab === "ingredients"
                   ? "text-orange-500"
                   : "text-muted-foreground"
               }`}
+              aria-current={activeTab === "ingredients" ? "page" : undefined}
+              tabIndex={0}
             >
               <div className="relative">
                 <List className="w-5 h-5" />
@@ -2205,11 +2217,13 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setActiveTab("recipes")}
-              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors relative ${
+              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors relative focus:outline-none ${
                 activeTab === "recipes"
                   ? "text-orange-500"
                   : "text-muted-foreground"
               }`}
+              aria-current={activeTab === "recipes" ? "page" : undefined}
+              tabIndex={0}
             >
               <div className="relative">
                 <BookOpen className="w-5 h-5" />
@@ -2223,11 +2237,13 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setActiveTab("profile")}
-              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors ${
+              className={`flex flex-col items-center gap-1 py-2 px-4 transition-colors focus:outline-none ${
                 activeTab === "profile"
                   ? "text-orange-500"
                   : "text-muted-foreground"
               }`}
+              aria-current={activeTab === "profile" ? "page" : undefined}
+              tabIndex={0}
             >
               <User className="w-5 h-5" />
               <span className="text-xs font-medium">Profile</span>
