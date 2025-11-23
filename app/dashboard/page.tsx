@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
 import {
   Sparkles,
   Lightbulb,
@@ -37,6 +38,9 @@ import {
   Heart,
   User,
   CheckCircle2,
+  Edit2,
+  X,
+  Save,
 } from "lucide-react";
 import IngredientManager from "@/app/components/IngredientManager";
 import { RecipeCard } from "@/app/components/RecipeCard";
@@ -218,7 +222,18 @@ export default function DashboardPage() {
   const [userProfile, setUserProfile] = useState<{
     firstName?: string;
     lastName?: string;
+    contactNo?: string;
   } | null>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editedProfile, setEditedProfile] = useState<{
+    firstName: string;
+    lastName: string;
+    contactNo: string;
+  }>({
+    firstName: "",
+    lastName: "",
+    contactNo: "",
+  });
   const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
   const [savedRecipeIds, setSavedRecipeIds] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -401,6 +416,7 @@ export default function DashboardPage() {
         setUserProfile({
           firstName: data.firstName,
           lastName: data.lastName,
+          contactNo: data.contactNo,
         });
       } else {
         console.log("User profile document does not exist for userId:", userId);
@@ -452,6 +468,57 @@ export default function DashboardPage() {
       );
     } catch (error) {
       console.error("Error saving ingredients to Firestore:", error);
+    }
+  };
+
+  // Profile editing functions
+  const handleEditProfile = () => {
+    setEditedProfile({
+      firstName: userProfile?.firstName || "",
+      lastName: userProfile?.lastName || "",
+      contactNo: userProfile?.contactNo || "",
+    });
+    setIsEditingProfile(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false);
+    setEditedProfile({
+      firstName: "",
+      lastName: "",
+      contactNo: "",
+    });
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) {
+      error("You must be logged in to update profile");
+      return;
+    }
+
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(
+        userDocRef,
+        {
+          firstName: editedProfile.firstName.trim(),
+          lastName: editedProfile.lastName.trim(),
+          contactNo: editedProfile.contactNo.trim(),
+        },
+        { merge: true }
+      );
+
+      setUserProfile({
+        firstName: editedProfile.firstName.trim(),
+        lastName: editedProfile.lastName.trim(),
+        contactNo: editedProfile.contactNo.trim(),
+      });
+
+      setIsEditingProfile(false);
+      success("Profile updated successfully!");
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      error("Failed to update profile. Please try again.");
     }
   };
 
@@ -1440,12 +1507,47 @@ export default function DashboardPage() {
         {/* User Info Card */}
         <Card className="border-none shadow-md dark:bg-card/50">
           <CardHeader>
-            <CardTitle className="tracking-tight">
-              Account Information
-            </CardTitle>
-            <CardDescription className="text-muted-foreground/80 leading-relaxed">
-              Your account details and preferences
-            </CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="tracking-tight">
+                  Account Information
+                </CardTitle>
+                <CardDescription className="text-muted-foreground/80 leading-relaxed">
+                  Your account details and preferences
+                </CardDescription>
+              </div>
+              {!isEditingProfile ? (
+                <Button
+                  onClick={handleEditProfile}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSaveProfile}
+                    size="sm"
+                    className="gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save
+                  </Button>
+                  <Button
+                    onClick={handleCancelEdit}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-4">
@@ -1465,24 +1567,89 @@ export default function DashboardPage() {
             </div>
 
             <div className="pt-4 border-t border-border space-y-3">
-              {userProfile?.firstName && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground/80">
-                    First Name
-                  </span>
-                  <span className="text-sm font-semibold text-foreground">
-                    {userProfile.firstName}
-                  </span>
-                </div>
-              )}
-              {userProfile?.lastName && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground/80">
-                    Last Name
-                  </span>
-                  <span className="text-sm font-semibold text-foreground">
-                    {userProfile.lastName}
-                  </span>
+              {!isEditingProfile ? (
+                <>
+                  {userProfile?.firstName && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground/80">
+                        First Name
+                      </span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {userProfile.firstName}
+                      </span>
+                    </div>
+                  )}
+                  {userProfile?.lastName && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground/80">
+                        Last Name
+                      </span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {userProfile.lastName}
+                      </span>
+                    </div>
+                  )}
+                  {userProfile?.contactNo && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground/80">
+                        Contact Number
+                      </span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {userProfile.contactNo}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">
+                      First Name
+                    </label>
+                    <Input
+                      value={editedProfile.firstName}
+                      onChange={(e) =>
+                        setEditedProfile({
+                          ...editedProfile,
+                          firstName: e.target.value,
+                        })
+                      }
+                      placeholder="Enter first name"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">
+                      Last Name
+                    </label>
+                    <Input
+                      value={editedProfile.lastName}
+                      onChange={(e) =>
+                        setEditedProfile({
+                          ...editedProfile,
+                          lastName: e.target.value,
+                        })
+                      }
+                      placeholder="Enter last name"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">
+                      Contact Number
+                    </label>
+                    <Input
+                      value={editedProfile.contactNo}
+                      onChange={(e) =>
+                        setEditedProfile({
+                          ...editedProfile,
+                          contactNo: e.target.value,
+                        })
+                      }
+                      placeholder="Enter contact number"
+                      className="w-full"
+                    />
+                  </div>
                 </div>
               )}
               <div className="flex justify-between items-center">
