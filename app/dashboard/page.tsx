@@ -13,7 +13,7 @@ import {
   getDoc,
   setDoc,
 } from "firebase/firestore";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut, sendPasswordResetEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { Header } from "@/app/components/Header";
 import {
@@ -41,6 +41,8 @@ import {
   Edit2,
   X,
   Save,
+  Key,
+  Mail,
 } from "lucide-react";
 import IngredientManager from "@/app/components/IngredientManager";
 import { RecipeCard } from "@/app/components/RecipeCard";
@@ -235,6 +237,11 @@ export default function DashboardPage() {
     lastName: "",
     contactNo: "",
   });
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
   const [savedRecipeIds, setSavedRecipeIds] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -532,6 +539,93 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Password change functions
+  const handleChangePassword = async () => {
+    if (!user || !user.email) {
+      error("You must be logged in to change password");
+      return;
+    }
+
+    // Reset error
+    setPasswordError("");
+
+    // Validate inputs
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("All password fields are required");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError("New password must be at least 6 characters");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Reauthenticate user before changing password
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        currentPassword
+      );
+      await reauthenticateWithCredential(user, credential);
+
+      // Update password
+      await updatePassword(user, newPassword);
+
+      // Clear form and close
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setShowChangePassword(false);
+      success("Password changed successfully!", 3000);
+    } catch (err: any) {
+      console.error("Error changing password:", err);
+      if (err.code === "auth/wrong-password") {
+        setPasswordError("Current password is incorrect");
+      } else if (err.code === "auth/weak-password") {
+        setPasswordError("New password is too weak");
+      } else if (err.code === "auth/requires-recent-login") {
+        setPasswordError("Please log out and log back in before changing your password");
+      } else {
+        setPasswordError(err.message || "Failed to change password");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendPasswordResetEmail = async () => {
+    if (!user || !user.email) {
+      error("No email address found for your account");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, user.email);
+      success(`Password reset email sent to ${user.email}`, 4000);
+      setShowChangePassword(false);
+    } catch (err: any) {
+      console.error("Error sending password reset email:", err);
+      error("Failed to send password reset email. Please try again.", 4000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelPasswordChange = () => {
+    setShowChangePassword(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError("");
   };
 
   // Helper function to check if recipe is already saved
@@ -1800,6 +1894,101 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Password & Security Card */}
+        <Card className="border-none shadow-md dark:bg-card/50">
+          <CardHeader>
+            <CardTitle className="tracking-tight">Password & Security</CardTitle>
+            <CardDescription className="text-muted-foreground/80 leading-relaxed">
+              Manage your password and account security
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!showChangePassword ? (
+              <div className="space-y-3">
+                <Button
+                  onClick={() => setShowChangePassword(true)}
+                  variant="outline"
+                  className="w-full justify-start gap-2 h-12"
+                >
+                  <Key className="w-4 h-4" />
+                  Change Password
+                </Button>
+                <Button
+                  onClick={handleSendPasswordResetEmail}
+                  disabled={loading}
+                  variant="outline"
+                  className="w-full justify-start gap-2 h-12"
+                >
+                  <Mail className="w-4 h-4" />
+                  Send Password Reset Email
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {passwordError && (
+                  <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
+                    {passwordError}
+                  </p>
+                )}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Current Password
+                  </label>
+                  <Input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    New Password
+                  </label>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password (min 6 characters)"
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Confirm New Password
+                  </label>
+                  <Input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={handleChangePassword}
+                    disabled={loading}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {loading ? "Changing..." : "Change Password"}
+                  </Button>
+                  <Button
+                    onClick={handleCancelPasswordChange}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
